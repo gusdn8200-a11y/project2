@@ -48,59 +48,21 @@ const journeyEntries = [
   { year: '2025', items: ['예술경영지원센터 창업도약 패키지 선정', 'WALLD 벽 시리즈 1권 공급'] },
 ]
 
-const mediaVideoModules = import.meta.glob('./assets/media/*.{mp4,webm,mov,m4v}', {
+const mediaVideoModules = import.meta.glob('./assets/image/*.{mp4,webm,mov,m4v}', {
   eager: true,
   import: 'default',
 })
 
-const mediaImageModules = import.meta.glob('./assets/media/*.{jpg,jpeg,png,webp,avif}', {
+const mediaImageModules = import.meta.glob('./assets/image/*.{jpg,jpeg,png,webp,avif}', {
   eager: true,
   import: 'default',
 })
-
-const normalizePath = (path) => path.normalize('NFC')
 
 const getFileName = (path) => {
-  const normalized = normalizePath(path)
-  return normalized.split('/').pop() ?? normalized
+  return path.split('/').pop() ?? path
 }
 
-const stripExtension = (name) => name.replace(/\.[^./]+$/, '')
-
-const normalizeVideoTitle = (title) => {
-  const compact = title.replace(/\s+/g, '')
-
-  if (compact === '메가인스톨') {
-    return '메가 인스톨'
-  }
-
-  if (compact === '미디어아트') {
-    return '미디어 아트'
-  }
-
-  if (compact === '스트릿아트') {
-    return '스트릿 아트'
-  }
-
-  if (compact === '시트래핑') {
-    return '시트 래핑'
-  }
-
-  return title
-}
-
-const extractVideoTitle = (path) => {
-  const fileName = getFileName(path)
-  const matched = fileName.match(/\(([^)]+)\)\.[^./]+$/)
-
-  if (matched?.[1]) {
-    return normalizeVideoTitle(matched[1].trim())
-  }
-
-  return normalizeVideoTitle(stripExtension(fileName))
-}
-
-const mediaDisplayOrder = [
+const mediaDisplayTitles = [
   '메가그래픽',
   '메가 인스톨',
   '미디어 아트',
@@ -108,48 +70,32 @@ const mediaDisplayOrder = [
   '시트 래핑',
 ]
 
-const mediaSortIndex = (title) => {
-  const index = mediaDisplayOrder.indexOf(title)
-  return index === -1 ? Number.MAX_SAFE_INTEGER : index
-}
-
-const isFooterOnlyVideo = (title) => {
-  const compact = title.replace(/\s+/g, '')
-  return compact === '푸터영상' || compact === '밑영상'
-}
-
 const allVideoItems = Object.entries(mediaVideoModules)
   .map(([path, video]) => {
-    const normalizedPath = normalizePath(path)
     return {
-      id: normalizedPath,
+      id: path,
       video,
-      title: extractVideoTitle(normalizedPath),
+      fileName: getFileName(path),
     }
   })
-  .sort((a, b) => {
-    const diff = mediaSortIndex(a.title) - mediaSortIndex(b.title)
+  .sort((a, b) => a.fileName.localeCompare(b.fileName, 'en'))
+  .map((item, index) => ({
+    ...item,
+    title: mediaDisplayTitles[index] ?? `영상 ${String(index + 1).padStart(2, '0')}`,
+  }))
 
-    if (diff !== 0) {
-      return diff
-    }
-
-    return a.title.localeCompare(b.title, 'ko')
-  })
-
-const mediaItems = allVideoItems.filter((item) => !isFooterOnlyVideo(item.title))
+const mediaItems = allVideoItems.slice(0, mediaDisplayTitles.length)
 
 const imagePool = Object.entries(mediaImageModules)
   .map(([path, image]) => {
     const fileName = getFileName(path)
     return {
-      id: normalizePath(path),
+      id: path,
       image,
       fileName,
     }
   })
-  .filter((item) => !item.fileName.includes('영상('))
-  .sort((a, b) => a.fileName.localeCompare(b.fileName, 'ko'))
+  .sort((a, b) => a.fileName.localeCompare(b.fileName, 'en'))
 
 const categoryPool = [
   'Mega Graphic',
@@ -270,27 +216,7 @@ const footerVideo = computed(() => {
     return null
   }
 
-  const bottomNamed = allVideoItems.find(
-    (item) => item.title.replace(/\s+/g, '') === '밑영상',
-  )
-
-  if (bottomNamed) {
-    return bottomNamed
-  }
-
-  const footerNamed = allVideoItems.find(
-    (item) => item.title.replace(/\s+/g, '') === '푸터영상',
-  )
-
-  if (footerNamed) {
-    return footerNamed
-  }
-
-  const preferred = allVideoItems.find((item) =>
-    /메가그래픽|메가|미디어/.test(item.title),
-  )
-
-  return preferred ?? allVideoItems[0]
+  return allVideoItems[mediaDisplayTitles.length] ?? allVideoItems[0]
 })
 
 const revealObservers = new WeakMap()
@@ -562,7 +488,7 @@ onBeforeUnmount(() => {
               <p class="video_title">{{ item.title }}</p>
             </div>
           </div>
-          <div v-else class="media_empty">`src/assets/media`에 영상 파일을 넣어주세요.</div>
+          <div v-else class="media_empty">`src/assets/image`에 영상 파일을 넣어주세요.</div>
         </div>
       </div>
     </section>
