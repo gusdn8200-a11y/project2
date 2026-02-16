@@ -307,6 +307,26 @@ let rafId = null
 
 const clamp = (value, min = 0, max = 1) => Math.min(max, Math.max(min, value))
 
+function primeVideoFrame(index) {
+  const target = videoRefs.value[index]
+  if (!target) {
+    return
+  }
+
+  if (target.dataset.primed === '1') {
+    return
+  }
+
+  const previewTime = Number.isFinite(target.duration) && target.duration > 0.2 ? 0.2 : 0.01
+
+  try {
+    target.currentTime = previewTime
+    target.dataset.primed = '1'
+  } catch {
+    // Ignore browsers that block seeking before full metadata sync.
+  }
+}
+
 const setVideoRef = (el, index) => {
   if (!el) {
     return
@@ -322,7 +342,6 @@ const playHoveredVideo = async (index) => {
     }
 
     video.pause()
-    video.currentTime = 0
   })
 
   const target = videoRefs.value[index]
@@ -344,7 +363,6 @@ const pauseHoveredVideo = (index) => {
   }
 
   target.pause()
-  target.currentTime = 0
 }
 
 const updateMediaMetrics = () => {
@@ -426,14 +444,14 @@ const mediaTrackStyle = computed(() => ({
 const vReveal = {
   mounted(el, binding) {
     const variant = typeof binding.value === 'string' ? binding.value : 'up'
-    el.classList.add('reveal', `reveal-${variant}`)
+    el.classList.add('reveal', `reveal_${variant}`)
 
     if (typeof window === 'undefined') {
       return
     }
 
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      el.classList.add('is-visible')
+      el.classList.add('is_visible')
       return
     }
 
@@ -444,7 +462,7 @@ const vReveal = {
             return
           }
 
-          entry.target.classList.add('is-visible')
+          entry.target.classList.add('is_visible')
           currentObserver.unobserve(entry.target)
         })
       },
@@ -503,10 +521,10 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="page">
-    <header class="site-header" :style="headerStyle">
-      <div class="container header-inner">
-        <a href="#media" class="logo-link" aria-label="walld 홈">
-          <span class="logo-text">wallD</span>
+    <header class="site_header" :style="headerStyle">
+      <div class="container header_inner">
+        <a href="#media" class="logo_link" aria-label="walld 홈">
+          <span class="logo_text">wallD</span>
         </a>
 
         <nav class="nav" aria-label="주요 메뉴">
@@ -515,12 +533,12 @@ onBeforeUnmount(() => {
       </div>
     </header>
 
-    <section id="media" class="media-section" ref="mediaSectionRef" :style="mediaSectionStyle">
-      <div class="media-sticky">
-        <div class="media-viewport" ref="mediaViewportRef">
-          <div v-if="mediaItems.length" class="video-track" ref="mediaTrackRef" :style="mediaTrackStyle">
+    <section id="media" class="media_section" ref="mediaSectionRef" :style="mediaSectionStyle">
+      <div class="media_sticky">
+        <div class="media_viewport" ref="mediaViewportRef">
+          <div v-if="mediaItems.length" class="video_track" ref="mediaTrackRef" :style="mediaTrackStyle">
             <div
-              class="video-item"
+              class="video_item"
               v-for="(item, index) in mediaItems"
               :key="item.id"
               tabindex="0"
@@ -529,53 +547,54 @@ onBeforeUnmount(() => {
               @focusin="playHoveredVideo(index)"
               @focusout="pauseHoveredVideo(index)"
             >
-              <div class="video-frame">
+              <div class="video_frame">
                 <video
                   :ref="(el) => setVideoRef(el, index)"
                   :src="item.video"
                   muted
                   loop
                   playsinline
-                  preload="metadata"
+                  preload="auto"
                   @loadedmetadata="handleResize"
+                  @loadeddata="primeVideoFrame(index)"
                 ></video>
               </div>
-              <p class="video-title">{{ item.title }}</p>
+              <p class="video_title">{{ item.title }}</p>
             </div>
           </div>
-          <div v-else class="media-empty">`src/assets/media`에 영상 파일을 넣어주세요.</div>
+          <div v-else class="media_empty">`src/assets/media`에 영상 파일을 넣어주세요.</div>
         </div>
       </div>
     </section>
 
     <main>
-      <section id="about" class="section about-section">
+      <section id="about" class="section about_section">
         <div class="container">
-          <div class="section-head" v-reveal="'up'">
-            <p class="section-kicker">ABOUT WALLD</p>
+          <div class="section_head" v-reveal="'up'">
+            <p class="section_kicker">ABOUT WALLD</p>
             <h2>브랜드 메시지가 보이는 벽을 만듭니다</h2>
           </div>
 
-          <div class="about-grid">
+          <div class="about_grid">
             <article
-              class="about-card"
+              class="about_card"
               v-for="(item, index) in servicePoints"
               :key="item.title"
               v-reveal="'up'"
-              :style="{ '--reveal-delay': `${index * 80}ms` }"
+              :style="{ '--reveal_delay': `${index * 80}ms` }"
             >
               <h3>{{ item.title }}</h3>
               <p>{{ item.description }}</p>
             </article>
           </div>
 
-          <div class="stats-grid">
+          <div class="stats_grid">
             <article
               class="stat"
               v-for="(item, index) in stats"
               :key="item.label"
               v-reveal="'zoom'"
-              :style="{ '--reveal-delay': `${index * 70}ms` }"
+              :style="{ '--reveal_delay': `${index * 70}ms` }"
             >
               <strong>{{ item.value }}</strong>
               <span>{{ item.label }}</span>
@@ -584,17 +603,17 @@ onBeforeUnmount(() => {
         </div>
       </section>
 
-      <section id="journey" class="section journey-section">
-        <div class="container journey-layout">
-          <div class="journey-intro" v-reveal="'up'">
-            <p class="journey-kicker">✦ Our Journey</p>
+      <section id="journey" class="section journey_section">
+        <div class="container journey_layout">
+          <div class="journey_intro" v-reveal="'up'">
+            <p class="journey_kicker">✦ Our Journey</p>
             <h2>WallD가<br />지나온 길</h2>
           </div>
 
-          <div class="journey-timeline" v-reveal="'up'">
-            <p class="journey-range">(©2020-25)</p>
+          <div class="journey_timeline" v-reveal="'up'">
+            <p class="journey_range">(©2020-25)</p>
 
-            <article class="journey-row" v-for="entry in journeyEntries" :key="entry.year">
+            <article class="journey_row" v-for="entry in journeyEntries" :key="entry.year">
               <strong>{{ entry.year }}</strong>
               <ul>
                 <li v-for="item in entry.items" :key="item">{{ item }}</li>
@@ -604,26 +623,26 @@ onBeforeUnmount(() => {
         </div>
       </section>
 
-      <section id="portfolio" class="section portfolio-section">
+      <section id="portfolio" class="section portfolio_section">
         <div class="container">
-          <div class="section-head" v-reveal="'up'">
-            <p class="section-kicker">PORTFOLIO</p>
+          <div class="section_head" v-reveal="'up'">
+            <p class="section_kicker">PORTFOLIO</p>
             <h2>고정 비율로 구성한 실제 시공 포트폴리오</h2>
-            <p class="portfolio-note">카드 비율을 통일해 일부 이미지는 잘릴 수 있습니다.</p>
+            <p class="portfolio_note">카드 비율을 통일해 일부 이미지는 잘릴 수 있습니다.</p>
           </div>
 
-          <div class="portfolio-featured" v-if="featuredProjects.length">
+          <div class="portfolio_featured" v-if="featuredProjects.length">
             <article
-              class="portfolio-feature-card"
+              class="portfolio_feature_card"
               v-for="(item, index) in featuredProjects"
               :key="item.title"
               v-reveal="'up'"
-              :style="{ '--reveal-delay': `${index * 90}ms` }"
+              :style="{ '--reveal_delay': `${index * 90}ms` }"
             >
-              <div class="media-frame featured-media">
-                <img :src="item.image" :alt="item.title" class="media-fluid" loading="lazy" />
+              <div class="media_frame featured_media">
+                <img :src="item.image" :alt="item.title" class="media_fluid" loading="lazy" />
               </div>
-              <div class="portfolio-copy">
+              <div class="portfolio_copy">
                 <p>{{ item.category }}</p>
                 <h3>{{ item.title }}</h3>
                 <span>{{ item.description }}</span>
@@ -631,18 +650,18 @@ onBeforeUnmount(() => {
             </article>
           </div>
 
-          <div class="portfolio-grid">
+          <div class="portfolio_grid">
             <article
-              class="portfolio-card"
+              class="portfolio_card"
               v-for="(item, index) in visiblePortfolioItems"
-              :key="`${item.title}-${index}`"
+              :key="`${item.title}_${index}`"
               v-reveal="'up'"
-              :style="{ '--reveal-delay': `${index * 65}ms` }"
+              :style="{ '--reveal_delay': `${index * 65}ms` }"
             >
-              <div class="media-frame card-media">
-                <img :src="item.image" :alt="item.title" class="media-fluid" loading="lazy" />
+              <div class="media_frame card_media">
+                <img :src="item.image" :alt="item.title" class="media_fluid" loading="lazy" />
               </div>
-              <div class="portfolio-copy">
+              <div class="portfolio_copy">
                 <p>{{ item.category }}</p>
                 <h3>{{ item.title }}</h3>
                 <span>{{ item.description }}</span>
@@ -650,45 +669,45 @@ onBeforeUnmount(() => {
             </article>
           </div>
 
-          <div class="portfolio-more-wrap" v-if="hasMorePortfolioItems">
-            <button type="button" class="portfolio-more-button" @click="showMorePortfolioItems">
+          <div class="portfolio_more_wrap" v-if="hasMorePortfolioItems">
+            <button type="button" class="portfolio_more_button" @click="showMorePortfolioItems">
               더보기
             </button>
           </div>
         </div>
       </section>
 
-      <section id="contact" class="section contact-section">
-        <div class="container contact-shell">
-          <div class="contact-topline" v-reveal="'up'">
+      <section id="contact" class="section contact_section">
+        <div class="container contact_shell">
+          <div class="contact_topline" v-reveal="'up'">
             <span>WallD</span>
             <span>Wall Advertising</span>
             <span>Contact</span>
           </div>
 
-          <div class="contact-hero" v-reveal="'up'">
+          <div class="contact_hero" v-reveal="'up'">
             <h2>Contact.</h2>
             <p>Transforming spaces with creativity. From concept to perfection, we make it seamless.</p>
           </div>
 
-          <div class="contact-layout">
-            <aside class="contact-side" v-reveal="'left'">
-              <span class="contact-chip">Contact now</span>
+          <div class="contact_layout">
+            <aside class="contact_side" v-reveal="'left'">
+              <span class="contact_chip">Contact now</span>
               <h3>벽 임대 및<br />솔루션 요청</h3>
               <p>wallD는 기업의 광고 아이디어를 현실에 구현해 드립니다.</p>
-              <div class="contact-divider"></div>
-              <ul class="contact-meta">
+              <div class="contact_divider"></div>
+              <ul class="contact_meta">
                 <li>서울특별시 성동구 성수일로3길 5</li>
                 <li>Monday - Friday / 10am - 6pm</li>
                 <li>T: 02-6215-2027</li>
                 <li>E: leonardo@wall-d.com</li>
               </ul>
-              <small class="contact-legal">© IFBI corp. All Right Reserved</small>
+              <small class="contact_legal">© IFBI corp. All Right Reserved</small>
             </aside>
 
-            <div class="contact-card" v-reveal="'up'">
+            <div class="contact_card" v-reveal="'up'">
               <h3>Let's Talk</h3>
-              <form class="contact-form" @submit.prevent>
+              <form class="contact_form" @submit.prevent>
                 <label>
                   이름 *
                   <input type="text" placeholder="문의자 이름/소속을 입력해주세요" />
@@ -699,7 +718,7 @@ onBeforeUnmount(() => {
                   <input type="text" placeholder="회사명을 입력해주세요" />
                 </label>
 
-                <div class="form-grid">
+                <div class="form_grid">
                   <label>
                     Email *
                     <input type="email" placeholder="abcd@walld.com" />
@@ -718,21 +737,21 @@ onBeforeUnmount(() => {
         </div>
       </section>
 
-      <section class="section footer-banner-section">
-        <div class="footer-banner" v-reveal="'up'">
-          <div class="footer-banner-text">
+      <section class="section footer_banner_section">
+        <div class="footer_banner" v-reveal="'up'">
+          <div class="footer_banner_text">
             <h2>WALLD</h2>
           </div>
 
-          <div class="footer-banner-video" v-if="footerVideo">
+          <div class="footer_banner_video" v-if="footerVideo">
             <video :src="footerVideo.video" autoplay muted loop playsinline preload="metadata"></video>
           </div>
         </div>
       </section>
     </main>
 
-    <footer class="site-footer">
-      <div class="container footer-inner">
+    <footer class="site_footer">
+      <div class="container footer_inner">
         <p>© 2026 walld. All rights reserved.</p>
         <div>
           <a href="#">개인정보처리방침</a>
@@ -748,7 +767,7 @@ onBeforeUnmount(() => {
 .page {
   --bg: #050608;
   --surface: #101217;
-  --surface-2: #151a20;
+  --surface_2: #151a20;
   --line: #2c323a;
   --text: #f3f4f6;
   --muted: #a7b0ba;
@@ -762,7 +781,7 @@ onBeforeUnmount(() => {
   margin: 0 auto;
 }
 
-.site-header {
+.site_header {
   position: fixed;
   top: 0;
   left: 0;
@@ -772,7 +791,7 @@ onBeforeUnmount(() => {
   backdrop-filter: blur(12px);
 }
 
-.header-inner {
+.header_inner {
   min-height: 74px;
   display: flex;
   align-items: center;
@@ -780,12 +799,12 @@ onBeforeUnmount(() => {
   gap: 1rem;
 }
 
-.logo-link {
+.logo_link {
   display: inline-flex;
   align-items: center;
 }
 
-.logo-text {
+.logo_text {
   font-size: 1.48rem;
   font-weight: 800;
   letter-spacing: -0.03em;
@@ -803,14 +822,14 @@ onBeforeUnmount(() => {
   color: var(--text);
 }
 
-.media-frame {
+.media_frame {
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 14px;
   background: #090b0e;
   overflow: hidden;
 }
 
-.media-fluid {
+.media_fluid {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -823,11 +842,11 @@ onBeforeUnmount(() => {
   border-top: 1px solid var(--line);
 }
 
-.section-head {
+.section_head {
   margin-bottom: 1.2rem;
 }
 
-.section-kicker {
+.section_kicker {
   margin: 0;
   font-size: 0.76rem;
   color: #98a3b0;
@@ -840,32 +859,32 @@ h2 {
   line-height: 1.2;
 }
 
-.about-grid {
+.about_grid {
   display: grid;
   gap: 0.8rem;
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
-.about-card {
+.about_card {
   border: 1px solid var(--line);
   border-radius: 12px;
   padding: 1rem;
   background: var(--surface);
 }
 
-.about-card h3 {
+.about_card h3 {
   margin: 0;
   font-size: 1.03rem;
 }
 
-.about-card p {
+.about_card p {
   margin: 0.55rem 0 0;
   color: var(--muted);
   line-height: 1.68;
   font-size: 0.92rem;
 }
 
-.stats-grid {
+.stats_grid {
   margin-top: 0.8rem;
   display: grid;
   gap: 0.8rem;
@@ -876,7 +895,7 @@ h2 {
   border: 1px solid var(--line);
   border-radius: 12px;
   padding: 0.9rem;
-  background: var(--surface-2);
+  background: var(--surface_2);
 }
 
 .stat strong {
@@ -891,13 +910,13 @@ h2 {
   font-size: 0.84rem;
 }
 
-.media-section {
+.media_section {
   border-top: 0;
   position: relative;
   background: #000;
 }
 
-.media-sticky {
+.media_sticky {
   position: sticky;
   top: 0;
   height: 100vh;
@@ -905,39 +924,43 @@ h2 {
   display: flex;
   align-items: flex-end;
   padding: 5.8rem 0 1.2rem;
+  background: #000;
 }
 
-.media-viewport {
+.media_viewport {
   width: 100%;
   overflow: hidden;
+  background: #000;
 }
 
-.video-track {
+.video_track {
   display: flex;
   align-items: end;
   gap: 0.9rem;
   padding: 0 2.8rem;
   will-change: transform;
+  background: #000;
 }
 
-.video-item {
+.video_item {
   flex: 0 0 min(52vw, 760px);
   display: grid;
   gap: 0.45rem;
   outline: none;
+  background: #000;
 }
 
-.video-item:focus-visible {
+.video_item:focus-visible {
   box-shadow: 0 0 0 2px rgba(238, 242, 248, 0.75);
 }
 
-.video-frame {
+.video_frame {
   aspect-ratio: 4 / 5;
   background: #000;
   overflow: hidden;
 }
 
-.video-frame video {
+.video_frame video {
   display: block;
   width: 100%;
   height: 100%;
@@ -946,7 +969,7 @@ h2 {
   pointer-events: none;
 }
 
-.video-title {
+.video_title {
   margin: 0;
   color: #d6dde7;
   font-size: 0.82rem;
@@ -954,7 +977,7 @@ h2 {
   text-align: center;
 }
 
-.media-empty {
+.media_empty {
   width: 100%;
   min-height: 220px;
   display: grid;
@@ -963,30 +986,30 @@ h2 {
   font-size: 0.95rem;
 }
 
-.journey-section {
+.journey_section {
   background: #000;
 }
 
-.journey-layout {
+.journey_layout {
   display: grid;
   grid-template-columns: minmax(220px, 0.72fr) minmax(0, 1.28fr);
   gap: 2rem;
 }
 
-.journey-kicker {
+.journey_kicker {
   margin: 0;
   color: #d5dce5;
   font-size: 1.1rem;
 }
 
-.journey-intro h2 {
+.journey_intro h2 {
   margin: 1rem 0 0;
   font-size: clamp(2.4rem, 5.4vw, 5.5rem);
   line-height: 0.95;
   letter-spacing: -0.03em;
 }
 
-.journey-range {
+.journey_range {
   margin: 0;
   padding-bottom: 0.85rem;
   border-bottom: 1px solid #1e232b;
@@ -994,7 +1017,7 @@ h2 {
   font-size: 0.88rem;
 }
 
-.journey-row {
+.journey_row {
   display: grid;
   grid-template-columns: 92px 1fr;
   gap: 1rem;
@@ -1002,13 +1025,13 @@ h2 {
   border-bottom: 1px solid #1e232b;
 }
 
-.journey-row strong {
+.journey_row strong {
   font-size: 1.8rem;
   line-height: 1;
   letter-spacing: -0.01em;
 }
 
-.journey-row ul {
+.journey_row ul {
   margin: 0;
   padding-left: 1.1rem;
   display: grid;
@@ -1018,46 +1041,46 @@ h2 {
   line-height: 1.45;
 }
 
-.portfolio-section {
+.portfolio_section {
   background: linear-gradient(180deg, rgba(17, 20, 25, 0.46), rgba(17, 20, 25, 0));
 }
 
-.portfolio-note {
+.portfolio_note {
   margin: 0.42rem 0 0;
   color: #95a2b1;
   font-size: 0.87rem;
 }
 
-.portfolio-featured {
+.portfolio_featured {
   display: grid;
   gap: 0.95rem;
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
-.portfolio-feature-card,
-.portfolio-card {
+.portfolio_feature_card,
+.portfolio_card {
   border: 1px solid var(--line);
   border-radius: 12px;
   background: rgba(12, 15, 20, 0.9);
   overflow: hidden;
 }
 
-.featured-media {
+.featured_media {
   aspect-ratio: 4 / 5;
 }
 
-.portfolio-grid {
+.portfolio_grid {
   margin-top: 0.95rem;
   display: grid;
   gap: 0.9rem;
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
-.card-media {
+.card_media {
   aspect-ratio: 4 / 5;
 }
 
-.portfolio-copy {
+.portfolio_copy {
   padding: 1rem;
   min-height: 136px;
   display: grid;
@@ -1065,19 +1088,19 @@ h2 {
   gap: 0.42rem;
 }
 
-.portfolio-copy p {
+.portfolio_copy p {
   margin: 0;
   color: #98a5b3;
   font-size: 0.76rem;
   letter-spacing: 0.06em;
 }
 
-.portfolio-copy h3 {
+.portfolio_copy h3 {
   margin: 0;
   font-size: 1.06rem;
 }
 
-.portfolio-copy span {
+.portfolio_copy span {
   margin: 0;
   display: -webkit-box;
   color: var(--muted);
@@ -1088,13 +1111,13 @@ h2 {
   overflow: hidden;
 }
 
-.portfolio-more-wrap {
+.portfolio_more_wrap {
   margin-top: 1.25rem;
   display: flex;
   justify-content: center;
 }
 
-.portfolio-more-button {
+.portfolio_more_button {
   min-width: 148px;
   min-height: 48px;
   border-radius: 999px;
@@ -1108,23 +1131,23 @@ h2 {
   transition: background-color 180ms ease, border-color 180ms ease;
 }
 
-.portfolio-more-button:hover {
+.portfolio_more_button:hover {
   background: rgba(255, 255, 255, 0.1);
   border-color: rgba(255, 255, 255, 0.46);
 }
 
-.contact-section {
+.contact_section {
   overflow: hidden;
   background: #000;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.contact-shell {
+.contact_shell {
   display: grid;
   gap: 1.25rem;
 }
 
-.contact-topline {
+.contact_topline {
   display: grid;
   grid-template-columns: 1fr 1fr auto;
   align-items: center;
@@ -1135,48 +1158,48 @@ h2 {
   font-size: 0.8rem;
 }
 
-.contact-topline span:nth-child(2) {
+.contact_topline span:nth-child(2) {
   text-align: center;
 }
 
-.contact-topline span:nth-child(3) {
+.contact_topline span:nth-child(3) {
   text-align: right;
 }
 
-.contact-hero {
+.contact_hero {
   display: grid;
   grid-template-columns: 1fr minmax(260px, 420px);
   align-items: end;
   gap: 1rem;
 }
 
-.contact-hero h2 {
+.contact_hero h2 {
   margin: 0;
   font-size: clamp(2.9rem, 8.2vw, 7.1rem);
   line-height: 0.9;
   letter-spacing: -0.03em;
 }
 
-.contact-hero p {
+.contact_hero p {
   margin: 0;
   color: #cad2dc;
   font-size: clamp(1.1rem, 2.4vw, 2.05rem);
   line-height: 1.08;
 }
 
-.contact-layout {
+.contact_layout {
   display: grid;
   grid-template-columns: minmax(220px, 0.58fr) minmax(0, 1.42fr);
   gap: 1.1rem;
 }
 
-.contact-side {
+.contact_side {
   display: grid;
   align-content: start;
   gap: 0.95rem;
 }
 
-.contact-chip {
+.contact_chip {
   width: max-content;
   padding: 0.34rem 0.62rem;
   border-radius: 2px;
@@ -1187,26 +1210,26 @@ h2 {
   font-weight: 600;
 }
 
-.contact-side h3 {
+.contact_side h3 {
   margin: 0;
   font-size: clamp(2.2rem, 4.2vw, 4rem);
   line-height: 1.05;
   letter-spacing: -0.02em;
 }
 
-.contact-side > p {
+.contact_side > p {
   margin: 0;
   color: #8f9aa7;
   font-size: 0.96rem;
   line-height: 1.7;
 }
 
-.contact-divider {
+.contact_divider {
   height: 1px;
   background: #232a32;
 }
 
-.contact-meta {
+.contact_meta {
   margin: 0;
   padding: 0;
   list-style: none;
@@ -1216,38 +1239,38 @@ h2 {
   font-size: 0.88rem;
 }
 
-.contact-legal {
+.contact_legal {
   color: #67717f;
   font-size: 0.78rem;
 }
 
-.contact-card {
+.contact_card {
   border: 1px solid #242a33;
   border-radius: 2px;
   background: linear-gradient(180deg, #111318, #0d0f13);
   padding: 1.5rem;
 }
 
-.contact-card h3 {
+.contact_card h3 {
   margin: 0 0 1.15rem;
   font-size: clamp(1.75rem, 3vw, 2.15rem);
   letter-spacing: -0.01em;
 }
 
-.contact-form {
+.contact_form {
   display: grid;
   gap: 0.85rem;
 }
 
-.contact-form label {
+.contact_form label {
   display: grid;
   gap: 0.36rem;
   font-size: 0.82rem;
   color: #d8e0ea;
 }
 
-.contact-form input,
-.contact-form textarea {
+.contact_form input,
+.contact_form textarea {
   width: 100%;
   min-width: 0;
   min-height: 58px;
@@ -1260,18 +1283,18 @@ h2 {
   padding: 0.78rem 0.88rem;
 }
 
-.contact-form input::placeholder,
-.contact-form textarea::placeholder {
+.contact_form input::placeholder,
+.contact_form textarea::placeholder {
   color: #838b97;
 }
 
-.form-grid {
+.form_grid {
   display: grid;
   gap: 0.72rem;
   grid-template-columns: 1fr 1fr;
 }
 
-.contact-form button {
+.contact_form button {
   margin-top: 0.18rem;
   border: 0;
   border-radius: 8px;
@@ -1284,12 +1307,12 @@ h2 {
   cursor: pointer;
 }
 
-.footer-banner-section {
+.footer_banner_section {
   background: #000;
   border-top: 1px solid #1f242b;
 }
 
-.footer-banner {
+.footer_banner {
   position: relative;
   width: 100%;
   border: 1px solid #1f242b;
@@ -1301,7 +1324,7 @@ h2 {
   overflow: hidden;
 }
 
-.footer-banner-text {
+.footer_banner_text {
   width: calc(100% - min(320px, 26vw));
   height: 100%;
   display: grid;
@@ -1309,7 +1332,7 @@ h2 {
   padding: clamp(1.1rem, 2.3vw, 2.1rem);
 }
 
-.footer-banner-text h2 {
+.footer_banner_text h2 {
   margin: 0;
   color: #eceff3;
   font-size: clamp(4.8rem, 18vw, 18rem);
@@ -1317,7 +1340,7 @@ h2 {
   line-height: 0.82;
 }
 
-.footer-banner-video {
+.footer_banner_video {
   position: absolute;
   right: clamp(0.85rem, 1.8vw, 1.6rem);
   top: 50%;
@@ -1330,19 +1353,19 @@ h2 {
   overflow: hidden;
 }
 
-.footer-banner-video video {
+.footer_banner_video video {
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
 }
 
-.site-footer {
+.site_footer {
   border-top: 1px solid var(--line);
   background: #090b0d;
 }
 
-.footer-inner {
+.footer_inner {
   min-height: 68px;
   display: flex;
   justify-content: space-between;
@@ -1352,63 +1375,63 @@ h2 {
   font-size: 0.82rem;
 }
 
-.footer-inner div {
+.footer_inner div {
   display: flex;
   gap: 0.72rem;
   flex-wrap: wrap;
 }
 
-.footer-inner a {
+.footer_inner a {
   color: #aab6c3;
 }
 
 .reveal {
-  --reveal-x: 0px;
-  --reveal-y: 28px;
-  --reveal-scale: 1;
+  --reveal_x: 0px;
+  --reveal_y: 28px;
+  --reveal_scale: 1;
   opacity: 0;
-  transform: translate3d(var(--reveal-x), var(--reveal-y), 0) scale(var(--reveal-scale));
+  transform: translate3d(var(--reveal_x), var(--reveal_y), 0) scale(var(--reveal_scale));
   transition: opacity 820ms cubic-bezier(0.22, 1, 0.36, 1),
     transform 820ms cubic-bezier(0.22, 1, 0.36, 1),
     filter 820ms cubic-bezier(0.22, 1, 0.36, 1);
-  transition-delay: var(--reveal-delay, 0ms);
+  transition-delay: var(--reveal_delay, 0ms);
   filter: blur(1px);
 }
 
-.reveal-up {
-  --reveal-y: 28px;
+.reveal_up {
+  --reveal_y: 28px;
 }
 
-.reveal-left {
-  --reveal-x: -34px;
-  --reveal-y: 0px;
+.reveal_left {
+  --reveal_x: -34px;
+  --reveal_y: 0px;
 }
 
-.reveal-right {
-  --reveal-x: 34px;
-  --reveal-y: 0px;
+.reveal_right {
+  --reveal_x: 34px;
+  --reveal_y: 0px;
 }
 
-.reveal-zoom {
-  --reveal-y: 12px;
-  --reveal-scale: 0.94;
+.reveal_zoom {
+  --reveal_y: 12px;
+  --reveal_scale: 0.94;
 }
 
-.reveal.is-visible {
+.reveal.is_visible {
   opacity: 1;
   transform: translate3d(0, 0, 0) scale(1);
   filter: blur(0);
 }
 
 @media (max-width: 1180px) {
-  .about-grid,
-  .stats-grid,
-  .portfolio-featured,
-  .portfolio-grid {
+  .about_grid,
+  .stats_grid,
+  .portfolio_featured,
+  .portfolio_grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .journey-layout {
+  .journey_layout {
     grid-template-columns: 1fr;
     gap: 1.2rem;
   }
@@ -1419,7 +1442,7 @@ h2 {
     width: min(1240px, calc(100% - 1.2rem));
   }
 
-  .header-inner {
+  .header_inner {
     min-height: 62px;
   }
 
@@ -1428,17 +1451,17 @@ h2 {
     font-size: 0.8rem;
   }
 
-  .media-sticky {
+  .media_sticky {
     padding-top: 4.9rem;
     padding-bottom: 0.8rem;
   }
 
-  .video-track {
+  .video_track {
     gap: 0.62rem;
     padding: 0 1.2rem;
   }
 
-  .video-item {
+  .video_item {
     flex-basis: 94vw;
   }
 
@@ -1446,66 +1469,66 @@ h2 {
     padding: 4.6rem 0;
   }
 
-  .journey-kicker {
+  .journey_kicker {
     font-size: 0.95rem;
   }
 
-  .journey-intro h2 {
+  .journey_intro h2 {
     font-size: clamp(2.2rem, 11vw, 3.6rem);
   }
 
-  .journey-row {
+  .journey_row {
     grid-template-columns: 72px 1fr;
     gap: 0.72rem;
     padding: 0.9rem 0;
   }
 
-  .journey-row strong {
+  .journey_row strong {
     font-size: 1.35rem;
   }
 
-  .journey-row ul {
+  .journey_row ul {
     font-size: 0.93rem;
     line-height: 1.55;
   }
 
-  .contact-topline {
+  .contact_topline {
     grid-template-columns: 1fr;
     gap: 0.2rem;
   }
 
-  .contact-topline span:nth-child(2),
-  .contact-topline span:nth-child(3) {
+  .contact_topline span:nth-child(2),
+  .contact_topline span:nth-child(3) {
     text-align: left;
   }
 
-  .contact-hero {
+  .contact_hero {
     grid-template-columns: 1fr;
     gap: 0.7rem;
   }
 
-  .contact-hero p {
+  .contact_hero p {
     max-width: 460px;
     font-size: 1.1rem;
   }
 
-  .contact-layout {
+  .contact_layout {
     grid-template-columns: 1fr;
   }
 
-  .footer-banner {
+  .footer_banner {
     min-height: auto;
     padding: 1rem;
     display: grid;
     gap: 0.85rem;
   }
 
-  .footer-banner-text {
+  .footer_banner_text {
     width: 100%;
     padding: 0;
   }
 
-  .footer-banner-video {
+  .footer_banner_video {
     position: relative;
     right: auto;
     top: auto;
@@ -1514,18 +1537,18 @@ h2 {
     justify-self: end;
   }
 
-  .portfolio-grid,
-  .portfolio-featured,
-  .about-grid,
-  .stats-grid {
+  .portfolio_grid,
+  .portfolio_featured,
+  .about_grid,
+  .stats_grid {
     grid-template-columns: 1fr;
   }
 
-  .form-grid {
+  .form_grid {
     grid-template-columns: 1fr;
   }
 
-  .footer-inner {
+  .footer_inner {
     min-height: auto;
     padding: 1rem 0;
     flex-direction: column;
