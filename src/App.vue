@@ -1,0 +1,1550 @@
+<script setup>
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+
+const navItems = [
+  { label: '소개', href: '#about' },
+  { label: '포트폴리오', href: '#portfolio' },
+  { label: '영상', href: '#media' },
+  { label: '문의', href: '#contact' },
+]
+
+const servicePoints = [
+  {
+    title: '벽면 임대 매칭',
+    description: '상권, 유동 인구, 노출 각도를 기준으로 건물 외벽과 브랜드를 연결합니다.',
+  },
+  {
+    title: '아트/광고 통합 기획',
+    description: '벽화, 래핑, 미디어파사드까지 현장 성격에 맞는 크리에이티브를 제안합니다.',
+  },
+  {
+    title: '현장 실행 원스톱',
+    description: '디자인 시안, 시공, 운영, 유지보수까지 한 팀에서 끝까지 책임집니다.',
+  },
+]
+
+const stats = [
+  { value: '120+', label: '운영 벽면 수' },
+  { value: '340K', label: '월 평균 노출량' },
+  { value: '98%', label: '프로젝트 완료율' },
+  { value: '24/7', label: '현장 모니터링' },
+]
+
+const journeyEntries = [
+  {
+    year: '2020',
+    items: ['청년창업사관학교 10기', 'WallD 서비스 런칭', '서울특별시 로컬크리에이터 선정', 'WALLD X CORP. 서비스 런칭'],
+  },
+  {
+    year: '2021',
+    items: ['WALLD X -KPOP STAR 서비스 런칭', '한국관광벤처기업 선정', '교보 임팩트업 최종 선정', 'MG희망나눔재단 소셜성장지원사업 3기 우수상'],
+  },
+  {
+    year: '2022',
+    items: ['디자인 스타트업 데모데이 2위', 'D.CAMP D.DAY 우승', 'WALLD 미술건축 서비스 런칭', 'SEED 7억원 투자유치'],
+  },
+  { year: '2023', items: ['창업도약패키지 선정'] },
+  { year: '2024', items: ['GSA 파트너십'] },
+  { year: '2025', items: ['예술경영지원센터 창업도약 패키지 선정', 'WALLD 벽 시리즈 1권 공급'] },
+]
+
+const mediaVideoModules = import.meta.glob('./assets/media/*.{mp4,webm,mov,m4v}', {
+  eager: true,
+  import: 'default',
+})
+
+const mediaImageModules = import.meta.glob('./assets/media/*.{jpg,jpeg,png,webp,avif}', {
+  eager: true,
+  import: 'default',
+})
+
+const normalizePath = (path) => path.normalize('NFC')
+
+const getFileName = (path) => {
+  const normalized = normalizePath(path)
+  return normalized.split('/').pop() ?? normalized
+}
+
+const stripExtension = (name) => name.replace(/\.[^./]+$/, '')
+
+const normalizeVideoTitle = (title) => {
+  const compact = title.replace(/\s+/g, '')
+
+  if (compact === '메가인스톨') {
+    return '메가 인스톨'
+  }
+
+  if (compact === '미디어아트') {
+    return '미디어 아트'
+  }
+
+  if (compact === '스트릿아트') {
+    return '스트릿 아트'
+  }
+
+  if (compact === '시트래핑') {
+    return '시트 래핑'
+  }
+
+  return title
+}
+
+const extractVideoTitle = (path) => {
+  const fileName = getFileName(path)
+  const matched = fileName.match(/\(([^)]+)\)\.[^./]+$/)
+
+  if (matched?.[1]) {
+    return normalizeVideoTitle(matched[1].trim())
+  }
+
+  return normalizeVideoTitle(stripExtension(fileName))
+}
+
+const mediaDisplayOrder = [
+  '메가그래픽',
+  '메가 인스톨',
+  '미디어 아트',
+  '스트릿 아트',
+  '시트 래핑',
+]
+
+const mediaSortIndex = (title) => {
+  const index = mediaDisplayOrder.indexOf(title)
+  return index === -1 ? Number.MAX_SAFE_INTEGER : index
+}
+
+const isFooterOnlyVideo = (title) => {
+  const compact = title.replace(/\s+/g, '')
+  return compact === '푸터영상' || compact === '밑영상'
+}
+
+const allVideoItems = Object.entries(mediaVideoModules)
+  .map(([path, video]) => {
+    const normalizedPath = normalizePath(path)
+    return {
+      id: normalizedPath,
+      video,
+      title: extractVideoTitle(normalizedPath),
+    }
+  })
+  .sort((a, b) => {
+    const diff = mediaSortIndex(a.title) - mediaSortIndex(b.title)
+
+    if (diff !== 0) {
+      return diff
+    }
+
+    return a.title.localeCompare(b.title, 'ko')
+  })
+
+const mediaItems = allVideoItems.filter((item) => !isFooterOnlyVideo(item.title))
+
+const imagePool = Object.entries(mediaImageModules)
+  .map(([path, image]) => {
+    const fileName = getFileName(path)
+    return {
+      id: normalizePath(path),
+      image,
+      fileName,
+    }
+  })
+  .filter((item) => !item.fileName.includes('영상('))
+  .sort((a, b) => a.fileName.localeCompare(b.fileName, 'ko'))
+
+const categoryPool = [
+  'Mega Graphic',
+  'Street Art',
+  'Media Art',
+  'Facade Art',
+  'Commercial Wrap',
+  'Artist Collaboration',
+  'Campaign Art',
+  'Seasonal Campaign',
+  'Public Art',
+  'Campaign Branding',
+  'Night Campaign',
+  'Commercial Art',
+  'Entertainment',
+  'Fandom Campaign',
+  'Detail Shot',
+  'Media Campaign',
+  'Commercial Wrap',
+  'Art Detail',
+]
+
+const featuredNamePool = [
+  '도심 시그니처 월',
+  '랜드마크 브랜드 캔버스',
+  '나이트 라이트 파사드',
+]
+
+const featuredDescriptionPool = [
+  '브랜드 핵심 메시지를 대형 외벽에 집약해 첫 시선을 잡는 대표 시안',
+  '유동 인구가 높은 동선에 맞춰 강한 인지와 체류를 만든 메인 비주얼',
+  '야간 조도 환경까지 고려해 입체감과 집중도를 높인 파사드 연출',
+]
+
+const portfolioNamePool = [
+  '블루 코너 래핑',
+  '선셋 타이포 월',
+  '시티 리듬 파사드',
+  '크림 톤 메가월',
+  '네온 포인트 래핑',
+  '아티스트 콜라주 월',
+  '브랜드 모노그램 빌딩',
+  '캠페인 포토 스팟 월',
+  '컬러 블록 익스텐션',
+  '스트리트 아트 캔버스',
+  '하이 콘트라스트 파사드',
+  '그래픽 스트라이프 월',
+  '웨이브 패턴 미디어월',
+  '메인 스트리트 브랜딩',
+  '아이덴티티 타워 래핑',
+  '다이내믹 캐릭터 월',
+  '파노라마 아트 파사드',
+  '그라데이션 임팩트 월',
+  '화이트 라인 시그니처',
+  '딥톤 커머셜 래핑',
+  '센터포인트 비주얼 월',
+  '시즌 키비주얼 파사드',
+  '아트웍 익스프레션 월',
+  '컬러 스플래시 브랜딩',
+]
+
+const portfolioDescriptionPool = [
+  '현장 가시성과 보행 동선을 반영해 브랜드 노출을 극대화한 외벽 시안',
+  '건물 비율에 맞춘 그래픽 밸런스로 멀리서도 식별되는 브랜딩 구성',
+  '공간 분위기와 상권 성격을 고려해 메시지 전달력을 높인 벽면 연출',
+  '색 대비와 타이포 리듬을 조합해 체류 시간을 늘린 시각 집중형 디자인',
+]
+
+const featuredProjects = computed(() =>
+  imagePool.slice(0, 3).map((item, index) => ({
+    title: featuredNamePool[index] ?? `시그니처 월 ${String(index + 1).padStart(2, '0')}`,
+    category: 'Featured Project',
+    image: item.image,
+    description:
+      featuredDescriptionPool[index] ??
+      featuredDescriptionPool[index % featuredDescriptionPool.length],
+  })),
+)
+
+const basePortfolioItems = computed(() =>
+  imagePool.slice(3).map((item, index) => ({
+    title: portfolioNamePool[index] ?? `WallD 아카이브 ${String(index + 1).padStart(2, '0')}`,
+    category: categoryPool[index % categoryPool.length],
+    image: item.image,
+    description: portfolioDescriptionPool[index % portfolioDescriptionPool.length],
+  })),
+)
+
+const portfolioInitialCount = 9
+const portfolioExpandStep = 3
+const portfolioVisibleCount = ref(portfolioInitialCount)
+
+const allPortfolioItems = computed(() => {
+  if (basePortfolioItems.value.length > 0) {
+    return basePortfolioItems.value
+  }
+
+  return featuredProjects.value
+})
+
+const visiblePortfolioItems = computed(() =>
+  allPortfolioItems.value.slice(0, portfolioVisibleCount.value),
+)
+
+const hasMorePortfolioItems = computed(
+  () => portfolioVisibleCount.value < allPortfolioItems.value.length,
+)
+
+const showMorePortfolioItems = () => {
+  portfolioVisibleCount.value = Math.min(
+    portfolioVisibleCount.value + portfolioExpandStep,
+    allPortfolioItems.value.length,
+  )
+}
+
+const footerVideo = computed(() => {
+  if (!allVideoItems.length) {
+    return null
+  }
+
+  const bottomNamed = allVideoItems.find(
+    (item) => item.title.replace(/\s+/g, '') === '밑영상',
+  )
+
+  if (bottomNamed) {
+    return bottomNamed
+  }
+
+  const footerNamed = allVideoItems.find(
+    (item) => item.title.replace(/\s+/g, '') === '푸터영상',
+  )
+
+  if (footerNamed) {
+    return footerNamed
+  }
+
+  const preferred = allVideoItems.find((item) =>
+    /메가그래픽|메가|미디어/.test(item.title),
+  )
+
+  return preferred ?? allVideoItems[0]
+})
+
+const revealObservers = new WeakMap()
+const mediaSectionRef = ref(null)
+const mediaViewportRef = ref(null)
+const mediaTrackRef = ref(null)
+const pageProgress = ref(0)
+const mediaProgress = ref(0)
+const mediaScrollDistance = ref(0)
+const videoRefs = ref([])
+
+let scrollTicking = false
+let rafId = null
+
+const clamp = (value, min = 0, max = 1) => Math.min(max, Math.max(min, value))
+
+const setVideoRef = (el, index) => {
+  if (!el) {
+    return
+  }
+
+  videoRefs.value[index] = el
+}
+
+const playHoveredVideo = async (index) => {
+  videoRefs.value.forEach((video, videoIndex) => {
+    if (!video || videoIndex === index) {
+      return
+    }
+
+    video.pause()
+    video.currentTime = 0
+  })
+
+  const target = videoRefs.value[index]
+  if (!target) {
+    return
+  }
+
+  try {
+    await target.play()
+  } catch {
+    // Ignore autoplay interruption in strict browser settings.
+  }
+}
+
+const pauseHoveredVideo = (index) => {
+  const target = videoRefs.value[index]
+  if (!target) {
+    return
+  }
+
+  target.pause()
+  target.currentTime = 0
+}
+
+const updateMediaMetrics = () => {
+  const viewport = mediaViewportRef.value
+  const track = mediaTrackRef.value
+
+  if (!viewport || !track) {
+    mediaScrollDistance.value = 0
+    return
+  }
+
+  const distance = track.scrollWidth - viewport.clientWidth
+  mediaScrollDistance.value = distance > 0 ? distance : 0
+}
+
+const updateMediaProgress = () => {
+  const section = mediaSectionRef.value
+  if (!section || typeof window === 'undefined') {
+    return
+  }
+
+  const maxScroll = section.offsetHeight - window.innerHeight
+  if (maxScroll <= 0) {
+    mediaProgress.value = 0
+    return
+  }
+
+  const scrolled = -section.getBoundingClientRect().top
+  mediaProgress.value = clamp(scrolled / maxScroll)
+}
+
+const updatePageProgress = () => {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  const maxScroll = document.documentElement.scrollHeight - window.innerHeight
+  pageProgress.value = maxScroll > 0 ? clamp(window.scrollY / maxScroll) : 0
+}
+
+const updateScrollState = () => {
+  updateMediaProgress()
+  updatePageProgress()
+}
+
+const scheduleScrollUpdate = () => {
+  if (scrollTicking || typeof window === 'undefined') {
+    return
+  }
+
+  scrollTicking = true
+  rafId = window.requestAnimationFrame(() => {
+    updateScrollState()
+    scrollTicking = false
+  })
+}
+
+const handleResize = () => {
+  updateMediaMetrics()
+  scheduleScrollUpdate()
+}
+
+const headerStyle = computed(() => {
+  const progress = pageProgress.value
+  return {
+    backgroundColor: `rgba(8, 10, 13, ${(0.42 + progress * 0.42).toFixed(3)})`,
+    borderBottomColor: `rgba(255, 255, 255, ${(0.08 + progress * 0.16).toFixed(3)})`,
+  }
+})
+
+const mediaSectionStyle = computed(() => ({
+  height: `calc(100vh + ${mediaScrollDistance.value.toFixed(2)}px)`,
+}))
+
+const mediaTrackStyle = computed(() => ({
+  transform: `translate3d(-${(mediaProgress.value * mediaScrollDistance.value).toFixed(2)}px, 0, 0)`,
+}))
+
+const vReveal = {
+  mounted(el, binding) {
+    const variant = typeof binding.value === 'string' ? binding.value : 'up'
+    el.classList.add('reveal', `reveal-${variant}`)
+
+    if (typeof window === 'undefined') {
+      return
+    }
+
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      el.classList.add('is-visible')
+      return
+    }
+
+    const observer = new IntersectionObserver(
+      (entries, currentObserver) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) {
+            return
+          }
+
+          entry.target.classList.add('is-visible')
+          currentObserver.unobserve(entry.target)
+        })
+      },
+      {
+        threshold: 0.15,
+        rootMargin: '0px 0px -10% 0px',
+      },
+    )
+
+    observer.observe(el)
+    revealObservers.set(el, observer)
+  },
+  unmounted(el) {
+    const observer = revealObservers.get(el)
+    if (!observer) {
+      return
+    }
+
+    observer.unobserve(el)
+    observer.disconnect()
+    revealObservers.delete(el)
+  },
+}
+
+onMounted(() => {
+  updateMediaMetrics()
+  updateScrollState()
+  window.addEventListener('scroll', scheduleScrollUpdate, { passive: true })
+  window.addEventListener('resize', handleResize)
+
+  nextTick(() => {
+    updateMediaMetrics()
+    updateScrollState()
+  })
+})
+
+onBeforeUnmount(() => {
+  if (typeof window !== 'undefined') {
+    if (rafId !== null) {
+      window.cancelAnimationFrame(rafId)
+    }
+
+    window.removeEventListener('scroll', scheduleScrollUpdate)
+    window.removeEventListener('resize', handleResize)
+  }
+
+  videoRefs.value.forEach((target) => {
+    if (!target) {
+      return
+    }
+
+    target.pause()
+  })
+})
+</script>
+
+<template>
+  <div class="page">
+    <header class="site-header" :style="headerStyle">
+      <div class="container header-inner">
+        <a href="#media" class="logo-link" aria-label="walld 홈">
+          <span class="logo-text">wallD</span>
+        </a>
+
+        <nav class="nav" aria-label="주요 메뉴">
+          <a v-for="item in navItems" :key="item.href" :href="item.href">{{ item.label }}</a>
+        </nav>
+      </div>
+    </header>
+
+    <section id="media" class="media-section" ref="mediaSectionRef" :style="mediaSectionStyle">
+      <div class="media-sticky">
+        <div class="media-viewport" ref="mediaViewportRef">
+          <div v-if="mediaItems.length" class="video-track" ref="mediaTrackRef" :style="mediaTrackStyle">
+            <div
+              class="video-item"
+              v-for="(item, index) in mediaItems"
+              :key="item.id"
+              tabindex="0"
+              @mouseenter="playHoveredVideo(index)"
+              @mouseleave="pauseHoveredVideo(index)"
+              @focusin="playHoveredVideo(index)"
+              @focusout="pauseHoveredVideo(index)"
+            >
+              <div class="video-frame">
+                <video
+                  :ref="(el) => setVideoRef(el, index)"
+                  :src="item.video"
+                  muted
+                  loop
+                  playsinline
+                  preload="metadata"
+                  @loadedmetadata="handleResize"
+                ></video>
+              </div>
+              <p class="video-title">{{ item.title }}</p>
+            </div>
+          </div>
+          <div v-else class="media-empty">`src/assets/media`에 영상 파일을 넣어주세요.</div>
+        </div>
+      </div>
+    </section>
+
+    <main>
+      <section id="about" class="section about-section">
+        <div class="container">
+          <div class="section-head" v-reveal="'up'">
+            <p class="section-kicker">ABOUT WALLD</p>
+            <h2>브랜드 메시지가 보이는 벽을 만듭니다</h2>
+          </div>
+
+          <div class="about-grid">
+            <article
+              class="about-card"
+              v-for="(item, index) in servicePoints"
+              :key="item.title"
+              v-reveal="'up'"
+              :style="{ '--reveal-delay': `${index * 80}ms` }"
+            >
+              <h3>{{ item.title }}</h3>
+              <p>{{ item.description }}</p>
+            </article>
+          </div>
+
+          <div class="stats-grid">
+            <article
+              class="stat"
+              v-for="(item, index) in stats"
+              :key="item.label"
+              v-reveal="'zoom'"
+              :style="{ '--reveal-delay': `${index * 70}ms` }"
+            >
+              <strong>{{ item.value }}</strong>
+              <span>{{ item.label }}</span>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section id="journey" class="section journey-section">
+        <div class="container journey-layout">
+          <div class="journey-intro" v-reveal="'up'">
+            <p class="journey-kicker">✦ Our Journey</p>
+            <h2>WallD가<br />지나온 길</h2>
+          </div>
+
+          <div class="journey-timeline" v-reveal="'up'">
+            <p class="journey-range">(©2020-25)</p>
+
+            <article class="journey-row" v-for="entry in journeyEntries" :key="entry.year">
+              <strong>{{ entry.year }}</strong>
+              <ul>
+                <li v-for="item in entry.items" :key="item">{{ item }}</li>
+              </ul>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section id="portfolio" class="section portfolio-section">
+        <div class="container">
+          <div class="section-head" v-reveal="'up'">
+            <p class="section-kicker">PORTFOLIO</p>
+            <h2>고정 비율로 구성한 실제 시공 포트폴리오</h2>
+            <p class="portfolio-note">카드 비율을 통일해 일부 이미지는 잘릴 수 있습니다.</p>
+          </div>
+
+          <div class="portfolio-featured" v-if="featuredProjects.length">
+            <article
+              class="portfolio-feature-card"
+              v-for="(item, index) in featuredProjects"
+              :key="item.title"
+              v-reveal="'up'"
+              :style="{ '--reveal-delay': `${index * 90}ms` }"
+            >
+              <div class="media-frame featured-media">
+                <img :src="item.image" :alt="item.title" class="media-fluid" loading="lazy" />
+              </div>
+              <div class="portfolio-copy">
+                <p>{{ item.category }}</p>
+                <h3>{{ item.title }}</h3>
+                <span>{{ item.description }}</span>
+              </div>
+            </article>
+          </div>
+
+          <div class="portfolio-grid">
+            <article
+              class="portfolio-card"
+              v-for="(item, index) in visiblePortfolioItems"
+              :key="`${item.title}-${index}`"
+              v-reveal="'up'"
+              :style="{ '--reveal-delay': `${index * 65}ms` }"
+            >
+              <div class="media-frame card-media">
+                <img :src="item.image" :alt="item.title" class="media-fluid" loading="lazy" />
+              </div>
+              <div class="portfolio-copy">
+                <p>{{ item.category }}</p>
+                <h3>{{ item.title }}</h3>
+                <span>{{ item.description }}</span>
+              </div>
+            </article>
+          </div>
+
+          <div class="portfolio-more-wrap" v-if="hasMorePortfolioItems">
+            <button type="button" class="portfolio-more-button" @click="showMorePortfolioItems">
+              더보기
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section id="contact" class="section contact-section">
+        <div class="container contact-shell">
+          <div class="contact-topline" v-reveal="'up'">
+            <span>WallD</span>
+            <span>Wall Advertising</span>
+            <span>Contact</span>
+          </div>
+
+          <div class="contact-hero" v-reveal="'up'">
+            <h2>Contact.</h2>
+            <p>Transforming spaces with creativity. From concept to perfection, we make it seamless.</p>
+          </div>
+
+          <div class="contact-layout">
+            <aside class="contact-side" v-reveal="'left'">
+              <span class="contact-chip">Contact now</span>
+              <h3>벽 임대 및<br />솔루션 요청</h3>
+              <p>wallD는 기업의 광고 아이디어를 현실에 구현해 드립니다.</p>
+              <div class="contact-divider"></div>
+              <ul class="contact-meta">
+                <li>서울특별시 성동구 성수일로3길 5</li>
+                <li>Monday - Friday / 10am - 6pm</li>
+                <li>T: 02-6215-2027</li>
+                <li>E: leonardo@wall-d.com</li>
+              </ul>
+              <small class="contact-legal">© IFBI corp. All Right Reserved</small>
+            </aside>
+
+            <div class="contact-card" v-reveal="'up'">
+              <h3>Let's Talk</h3>
+              <form class="contact-form" @submit.prevent>
+                <label>
+                  이름 *
+                  <input type="text" placeholder="문의자 이름/소속을 입력해주세요" />
+                </label>
+
+                <label>
+                  회사명 *
+                  <input type="text" placeholder="회사명을 입력해주세요" />
+                </label>
+
+                <div class="form-grid">
+                  <label>
+                    Email *
+                    <input type="email" placeholder="abcd@walld.com" />
+                  </label>
+
+                  <label>
+                    연락처 *
+                    <input type="tel" placeholder="01012345678" />
+                  </label>
+                </div>
+
+                <button type="submit">Submit Now</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section footer-banner-section">
+        <div class="footer-banner" v-reveal="'up'">
+          <div class="footer-banner-text">
+            <h2>WALLD</h2>
+          </div>
+
+          <div class="footer-banner-video" v-if="footerVideo">
+            <video :src="footerVideo.video" autoplay muted loop playsinline preload="metadata"></video>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container footer-inner">
+        <p>© 2026 walld. All rights reserved.</p>
+        <div>
+          <a href="#">개인정보처리방침</a>
+          <a href="#">이용약관</a>
+          <a href="#">문의하기</a>
+        </div>
+      </div>
+    </footer>
+  </div>
+</template>
+
+<style scoped>
+.page {
+  --bg: #050608;
+  --surface: #101217;
+  --surface-2: #151a20;
+  --line: #2c323a;
+  --text: #f3f4f6;
+  --muted: #a7b0ba;
+  min-height: 100vh;
+  background: radial-gradient(circle at 80% 20%, rgba(62, 76, 117, 0.16), transparent 30%), var(--bg);
+  color: var(--text);
+}
+
+.container {
+  width: min(1240px, calc(100% - 2.8rem));
+  margin: 0 auto;
+}
+
+.site-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 70;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
+}
+
+.header-inner {
+  min-height: 74px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.logo-link {
+  display: inline-flex;
+  align-items: center;
+}
+
+.logo-text {
+  font-size: 1.48rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: #f4f7fb;
+}
+
+.nav {
+  display: flex;
+  gap: 1.35rem;
+  font-size: 0.92rem;
+  color: var(--muted);
+}
+
+.nav a:hover {
+  color: var(--text);
+}
+
+.media-frame {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  background: #090b0e;
+  overflow: hidden;
+}
+
+.media-fluid {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.section {
+  position: relative;
+  padding: 5.4rem 0;
+  border-top: 1px solid var(--line);
+}
+
+.section-head {
+  margin-bottom: 1.2rem;
+}
+
+.section-kicker {
+  margin: 0;
+  font-size: 0.76rem;
+  color: #98a3b0;
+  letter-spacing: 0.08em;
+}
+
+h2 {
+  margin: 0.62rem 0 0;
+  font-size: clamp(1.6rem, 3vw, 2.6rem);
+  line-height: 1.2;
+}
+
+.about-grid {
+  display: grid;
+  gap: 0.8rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.about-card {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 1rem;
+  background: var(--surface);
+}
+
+.about-card h3 {
+  margin: 0;
+  font-size: 1.03rem;
+}
+
+.about-card p {
+  margin: 0.55rem 0 0;
+  color: var(--muted);
+  line-height: 1.68;
+  font-size: 0.92rem;
+}
+
+.stats-grid {
+  margin-top: 0.8rem;
+  display: grid;
+  gap: 0.8rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.stat {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 0.9rem;
+  background: var(--surface-2);
+}
+
+.stat strong {
+  display: block;
+  font-size: 1.55rem;
+}
+
+.stat span {
+  margin-top: 0.3rem;
+  display: block;
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.media-section {
+  border-top: 0;
+  position: relative;
+  background: #000;
+}
+
+.media-sticky {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+  padding: 5.8rem 0 1.2rem;
+}
+
+.media-viewport {
+  width: 100%;
+  overflow: hidden;
+}
+
+.video-track {
+  display: flex;
+  align-items: end;
+  gap: 0.9rem;
+  padding: 0 2.8rem;
+  will-change: transform;
+}
+
+.video-item {
+  flex: 0 0 min(52vw, 760px);
+  display: grid;
+  gap: 0.45rem;
+  outline: none;
+}
+
+.video-item:focus-visible {
+  box-shadow: 0 0 0 2px rgba(238, 242, 248, 0.75);
+}
+
+.video-frame {
+  aspect-ratio: 4 / 5;
+  background: #000;
+  overflow: hidden;
+}
+
+.video-frame video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #000;
+  pointer-events: none;
+}
+
+.video-title {
+  margin: 0;
+  color: #d6dde7;
+  font-size: 0.82rem;
+  letter-spacing: 0.02em;
+  text-align: center;
+}
+
+.media-empty {
+  width: 100%;
+  min-height: 220px;
+  display: grid;
+  place-items: center;
+  color: #aeb8c4;
+  font-size: 0.95rem;
+}
+
+.journey-section {
+  background: #000;
+}
+
+.journey-layout {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.72fr) minmax(0, 1.28fr);
+  gap: 2rem;
+}
+
+.journey-kicker {
+  margin: 0;
+  color: #d5dce5;
+  font-size: 1.1rem;
+}
+
+.journey-intro h2 {
+  margin: 1rem 0 0;
+  font-size: clamp(2.4rem, 5.4vw, 5.5rem);
+  line-height: 0.95;
+  letter-spacing: -0.03em;
+}
+
+.journey-range {
+  margin: 0;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid #1e232b;
+  color: #788291;
+  font-size: 0.88rem;
+}
+
+.journey-row {
+  display: grid;
+  grid-template-columns: 92px 1fr;
+  gap: 1rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid #1e232b;
+}
+
+.journey-row strong {
+  font-size: 1.8rem;
+  line-height: 1;
+  letter-spacing: -0.01em;
+}
+
+.journey-row ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 0.42rem;
+  color: #ccd3dd;
+  font-size: 1.15rem;
+  line-height: 1.45;
+}
+
+.portfolio-section {
+  background: linear-gradient(180deg, rgba(17, 20, 25, 0.46), rgba(17, 20, 25, 0));
+}
+
+.portfolio-note {
+  margin: 0.42rem 0 0;
+  color: #95a2b1;
+  font-size: 0.87rem;
+}
+
+.portfolio-featured {
+  display: grid;
+  gap: 0.95rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.portfolio-feature-card,
+.portfolio-card {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(12, 15, 20, 0.9);
+  overflow: hidden;
+}
+
+.featured-media {
+  aspect-ratio: 4 / 5;
+}
+
+.portfolio-grid {
+  margin-top: 0.95rem;
+  display: grid;
+  gap: 0.9rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.card-media {
+  aspect-ratio: 4 / 5;
+}
+
+.portfolio-copy {
+  padding: 1rem;
+  min-height: 136px;
+  display: grid;
+  align-content: start;
+  gap: 0.42rem;
+}
+
+.portfolio-copy p {
+  margin: 0;
+  color: #98a5b3;
+  font-size: 0.76rem;
+  letter-spacing: 0.06em;
+}
+
+.portfolio-copy h3 {
+  margin: 0;
+  font-size: 1.06rem;
+}
+
+.portfolio-copy span {
+  margin: 0;
+  display: -webkit-box;
+  color: var(--muted);
+  line-height: 1.58;
+  font-size: 0.88rem;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.portfolio-more-wrap {
+  margin-top: 1.25rem;
+  display: flex;
+  justify-content: center;
+}
+
+.portfolio-more-button {
+  min-width: 148px;
+  min-height: 48px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.26);
+  background: rgba(255, 255, 255, 0.04);
+  color: #eef2f8;
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 180ms ease, border-color 180ms ease;
+}
+
+.portfolio-more-button:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.46);
+}
+
+.contact-section {
+  overflow: hidden;
+  background: #000;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.contact-shell {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.contact-topline {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding-bottom: 0.62rem;
+  border-bottom: 1px solid #1f242b;
+  color: #7b8593;
+  font-size: 0.8rem;
+}
+
+.contact-topline span:nth-child(2) {
+  text-align: center;
+}
+
+.contact-topline span:nth-child(3) {
+  text-align: right;
+}
+
+.contact-hero {
+  display: grid;
+  grid-template-columns: 1fr minmax(260px, 420px);
+  align-items: end;
+  gap: 1rem;
+}
+
+.contact-hero h2 {
+  margin: 0;
+  font-size: clamp(2.9rem, 8.2vw, 7.1rem);
+  line-height: 0.9;
+  letter-spacing: -0.03em;
+}
+
+.contact-hero p {
+  margin: 0;
+  color: #cad2dc;
+  font-size: clamp(1.1rem, 2.4vw, 2.05rem);
+  line-height: 1.08;
+}
+
+.contact-layout {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.58fr) minmax(0, 1.42fr);
+  gap: 1.1rem;
+}
+
+.contact-side {
+  display: grid;
+  align-content: start;
+  gap: 0.95rem;
+}
+
+.contact-chip {
+  width: max-content;
+  padding: 0.34rem 0.62rem;
+  border-radius: 2px;
+  border: 1px solid #bec4cb;
+  background: #f2f4f7;
+  color: #0b0f14;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.contact-side h3 {
+  margin: 0;
+  font-size: clamp(2.2rem, 4.2vw, 4rem);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+}
+
+.contact-side > p {
+  margin: 0;
+  color: #8f9aa7;
+  font-size: 0.96rem;
+  line-height: 1.7;
+}
+
+.contact-divider {
+  height: 1px;
+  background: #232a32;
+}
+
+.contact-meta {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.42rem;
+  color: #b0bac7;
+  font-size: 0.88rem;
+}
+
+.contact-legal {
+  color: #67717f;
+  font-size: 0.78rem;
+}
+
+.contact-card {
+  border: 1px solid #242a33;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #111318, #0d0f13);
+  padding: 1.5rem;
+}
+
+.contact-card h3 {
+  margin: 0 0 1.15rem;
+  font-size: clamp(1.75rem, 3vw, 2.15rem);
+  letter-spacing: -0.01em;
+}
+
+.contact-form {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.contact-form label {
+  display: grid;
+  gap: 0.36rem;
+  font-size: 0.82rem;
+  color: #d8e0ea;
+}
+
+.contact-form input,
+.contact-form textarea {
+  width: 100%;
+  min-width: 0;
+  min-height: 58px;
+  border: 1px solid #313845;
+  border-radius: 8px;
+  background: #23262e;
+  color: #f0f3f7;
+  font: inherit;
+  font-size: 0.9rem;
+  padding: 0.78rem 0.88rem;
+}
+
+.contact-form input::placeholder,
+.contact-form textarea::placeholder {
+  color: #838b97;
+}
+
+.form-grid {
+  display: grid;
+  gap: 0.72rem;
+  grid-template-columns: 1fr 1fr;
+}
+
+.contact-form button {
+  margin-top: 0.18rem;
+  border: 0;
+  border-radius: 8px;
+  min-height: 58px;
+  background: #f1f3f6;
+  color: #0e1116;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.footer-banner-section {
+  background: #000;
+  border-top: 1px solid #1f242b;
+}
+
+.footer-banner {
+  position: relative;
+  width: 100%;
+  border: 1px solid #1f242b;
+  border-radius: 2px;
+  min-height: clamp(250px, 36vw, 520px);
+  background: radial-gradient(circle at 80% 0%, rgba(255, 255, 255, 0.06), transparent 28%),
+    repeating-linear-gradient(-35deg, rgba(255, 255, 255, 0.022) 0px, rgba(255, 255, 255, 0.022) 1px, transparent 1px, transparent 6px),
+    linear-gradient(180deg, #15171c, #111318);
+  overflow: hidden;
+}
+
+.footer-banner-text {
+  width: calc(100% - min(320px, 26vw));
+  height: 100%;
+  display: grid;
+  align-items: center;
+  padding: clamp(1.1rem, 2.3vw, 2.1rem);
+}
+
+.footer-banner-text h2 {
+  margin: 0;
+  color: #eceff3;
+  font-size: clamp(4.8rem, 18vw, 18rem);
+  letter-spacing: 0.02em;
+  line-height: 0.82;
+}
+
+.footer-banner-video {
+  position: absolute;
+  right: clamp(0.85rem, 1.8vw, 1.6rem);
+  top: 50%;
+  transform: translateY(-50%);
+  width: min(320px, 26vw);
+  aspect-ratio: 9 / 16;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: #000;
+  overflow: hidden;
+}
+
+.footer-banner-video video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.site-footer {
+  border-top: 1px solid var(--line);
+  background: #090b0d;
+}
+
+.footer-inner {
+  min-height: 68px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.9rem;
+  color: #97a3b1;
+  font-size: 0.82rem;
+}
+
+.footer-inner div {
+  display: flex;
+  gap: 0.72rem;
+  flex-wrap: wrap;
+}
+
+.footer-inner a {
+  color: #aab6c3;
+}
+
+.reveal {
+  --reveal-x: 0px;
+  --reveal-y: 28px;
+  --reveal-scale: 1;
+  opacity: 0;
+  transform: translate3d(var(--reveal-x), var(--reveal-y), 0) scale(var(--reveal-scale));
+  transition: opacity 820ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 820ms cubic-bezier(0.22, 1, 0.36, 1),
+    filter 820ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: var(--reveal-delay, 0ms);
+  filter: blur(1px);
+}
+
+.reveal-up {
+  --reveal-y: 28px;
+}
+
+.reveal-left {
+  --reveal-x: -34px;
+  --reveal-y: 0px;
+}
+
+.reveal-right {
+  --reveal-x: 34px;
+  --reveal-y: 0px;
+}
+
+.reveal-zoom {
+  --reveal-y: 12px;
+  --reveal-scale: 0.94;
+}
+
+.reveal.is-visible {
+  opacity: 1;
+  transform: translate3d(0, 0, 0) scale(1);
+  filter: blur(0);
+}
+
+@media (max-width: 1180px) {
+  .about-grid,
+  .stats-grid,
+  .portfolio-featured,
+  .portfolio-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .journey-layout {
+    grid-template-columns: 1fr;
+    gap: 1.2rem;
+  }
+}
+
+@media (max-width: 760px) {
+  .container {
+    width: min(1240px, calc(100% - 1.2rem));
+  }
+
+  .header-inner {
+    min-height: 62px;
+  }
+
+  .nav {
+    gap: 0.8rem;
+    font-size: 0.8rem;
+  }
+
+  .media-sticky {
+    padding-top: 4.9rem;
+    padding-bottom: 0.8rem;
+  }
+
+  .video-track {
+    gap: 0.62rem;
+    padding: 0 1.2rem;
+  }
+
+  .video-item {
+    flex-basis: 94vw;
+  }
+
+  .section {
+    padding: 4.6rem 0;
+  }
+
+  .journey-kicker {
+    font-size: 0.95rem;
+  }
+
+  .journey-intro h2 {
+    font-size: clamp(2.2rem, 11vw, 3.6rem);
+  }
+
+  .journey-row {
+    grid-template-columns: 72px 1fr;
+    gap: 0.72rem;
+    padding: 0.9rem 0;
+  }
+
+  .journey-row strong {
+    font-size: 1.35rem;
+  }
+
+  .journey-row ul {
+    font-size: 0.93rem;
+    line-height: 1.55;
+  }
+
+  .contact-topline {
+    grid-template-columns: 1fr;
+    gap: 0.2rem;
+  }
+
+  .contact-topline span:nth-child(2),
+  .contact-topline span:nth-child(3) {
+    text-align: left;
+  }
+
+  .contact-hero {
+    grid-template-columns: 1fr;
+    gap: 0.7rem;
+  }
+
+  .contact-hero p {
+    max-width: 460px;
+    font-size: 1.1rem;
+  }
+
+  .contact-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .footer-banner {
+    min-height: auto;
+    padding: 1rem;
+    display: grid;
+    gap: 0.85rem;
+  }
+
+  .footer-banner-text {
+    width: 100%;
+    padding: 0;
+  }
+
+  .footer-banner-video {
+    position: relative;
+    right: auto;
+    top: auto;
+    transform: none;
+    width: min(320px, 72vw);
+    justify-self: end;
+  }
+
+  .portfolio-grid,
+  .portfolio-featured,
+  .about-grid,
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .footer-inner {
+    min-height: auto;
+    padding: 1rem 0;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 560px) {
+  .nav {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+    filter: none;
+    transition: none;
+  }
+}
+</style>
