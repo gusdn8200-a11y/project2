@@ -70,7 +70,7 @@ const mediaDisplayTitles = [
   '시트 래핑',
 ]
 
-const allVideoItems = Object.entries(mediaVideoModules)
+const sortedVideoItems = Object.entries(mediaVideoModules)
   .map(([path, video]) => {
     return {
       id: path,
@@ -79,7 +79,16 @@ const allVideoItems = Object.entries(mediaVideoModules)
     }
   })
   .sort((a, b) => a.fileName.localeCompare(b.fileName, 'en'))
-  .map((item, index) => ({
+
+if (sortedVideoItems.length > mediaDisplayTitles.length) {
+  const mediaLastIndex = mediaDisplayTitles.length - 1
+  const footerIndex = mediaDisplayTitles.length
+  const mediaLastItem = sortedVideoItems[mediaLastIndex]
+  sortedVideoItems[mediaLastIndex] = sortedVideoItems[footerIndex]
+  sortedVideoItems[footerIndex] = mediaLastItem
+}
+
+const allVideoItems = sortedVideoItems.map((item, index) => ({
     ...item,
     title: mediaDisplayTitles[index] ?? `영상 ${String(index + 1).padStart(2, '0')}`,
   }))
