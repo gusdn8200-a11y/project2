@@ -300,6 +300,29 @@ const pauseHoveredVideo = (index) => {
   target.pause()
 }
 
+const resetVideoToStart = (index) => {
+  const target = videoRefs.value[index]
+  if (!target) {
+    return
+  }
+
+  target.pause()
+
+  try {
+    target.currentTime = 0
+  } catch {
+    // Ignore browsers that block seeking before full metadata sync.
+  }
+}
+
+const handleVideoTouchStart = (index) => {
+  playHoveredVideo(index)
+}
+
+const handleVideoTouchEnd = (index) => {
+  resetVideoToStart(index)
+}
+
 const updateMediaMetrics = () => {
   const viewport = mediaViewportRef.value
   const track = mediaTrackRef.value
@@ -481,6 +504,9 @@ onBeforeUnmount(() => {
               @mouseleave="pauseHoveredVideo(index)"
               @focusin="playHoveredVideo(index)"
               @focusout="pauseHoveredVideo(index)"
+              @touchstart.passive="handleVideoTouchStart(index)"
+              @touchend="handleVideoTouchEnd(index)"
+              @touchcancel="handleVideoTouchEnd(index)"
             >
               <div class="video_frame">
                 <video
