@@ -70,6 +70,33 @@ const mediaDisplayTitles = [
   '시트 래핑',
 ]
 
+const mediaPosterColors = [
+  ['#0f1219', '#2f436e'],
+  ['#10141c', '#41566e'],
+  ['#10151e', '#334f63'],
+  ['#12151d', '#4b3f65'],
+  ['#11161f', '#3b5f5b'],
+]
+
+const buildMediaPoster = (title, index) => {
+  const [startColor, endColor] = mediaPosterColors[index % mediaPosterColors.length]
+  const svg = `
+<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 1500'>
+  <defs>
+    <linearGradient id='posterGradient' x1='0' y1='0' x2='1' y2='1'>
+      <stop offset='0%' stop-color='${startColor}' />
+      <stop offset='100%' stop-color='${endColor}' />
+    </linearGradient>
+  </defs>
+  <rect width='1200' height='1500' fill='url(#posterGradient)' />
+  <rect x='52' y='52' width='1096' height='1396' fill='none' stroke='rgba(255,255,255,0.18)' stroke-width='3' />
+  <text x='94' y='1406' fill='rgba(255,255,255,0.88)' font-size='62' font-family='Arial, sans-serif' letter-spacing='2'>${title}</text>
+</svg>
+  `.trim()
+
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`
+}
+
 const sortedVideoItems = Object.entries(mediaVideoModules)
   .map(([path, video]) => {
     return {
@@ -88,10 +115,16 @@ if (sortedVideoItems.length > mediaDisplayTitles.length) {
   sortedVideoItems[footerIndex] = mediaLastItem
 }
 
-const allVideoItems = sortedVideoItems.map((item, index) => ({
+const allVideoItems = sortedVideoItems.map((item, index) => {
+  const title = mediaDisplayTitles[index] ?? `영상 ${String(index + 1).padStart(2, '0')}`
+
+  return {
     ...item,
-    title: mediaDisplayTitles[index] ?? `영상 ${String(index + 1).padStart(2, '0')}`,
-  }))
+    title,
+    poster: buildMediaPoster(title, index),
+    preload: index < 2 ? 'auto' : 'metadata',
+  }
+})
 
 const mediaItems = allVideoItems.slice(0, mediaDisplayTitles.length)
 
@@ -235,10 +268,13 @@ const mediaTrackRef = ref(null)
 const pageProgress = ref(0)
 const mediaProgress = ref(0)
 const mediaScrollDistance = ref(0)
+const isMobileMediaMode = ref(false)
 const videoRefs = ref([])
 
 let scrollTicking = false
 let rafId = null
+let mediaModeQuery = null
+let mediaModeQueryListener = null
 
 const clamp = (value, min = 0, max = 1) => Math.min(max, Math.max(min, value))
 
@@ -324,6 +360,11 @@ const handleVideoTouchEnd = (index) => {
 }
 
 const updateMediaMetrics = () => {
+  if (isMobileMediaMode.value) {
+    mediaScrollDistance.value = 0
+    return
+  }
+
   const viewport = mediaViewportRef.value
   const track = mediaTrackRef.value
 
@@ -337,6 +378,11 @@ const updateMediaMetrics = () => {
 }
 
 const updateMediaProgress = () => {
+  if (isMobileMediaMode.value) {
+    mediaProgress.value = 0
+    return
+  }
+
   const section = mediaSectionRef.value
   if (!section || typeof window === 'undefined') {
     return
@@ -383,6 +429,14 @@ const handleResize = () => {
   scheduleScrollUpdate()
 }
 
+const updateMediaMode = () => {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  isMobileMediaMode.value = window.matchMedia('(max-width: 760px)').matches
+}
+
 const headerStyle = computed(() => {
   const progress = pageProgress.value
   return {
@@ -391,13 +445,21 @@ const headerStyle = computed(() => {
   }
 })
 
-const mediaSectionStyle = computed(() => ({
-  height: `calc(100vh + ${mediaScrollDistance.value.toFixed(2)}px)`,
-}))
+const mediaSectionStyle = computed(() =>
+  isMobileMediaMode.value
+    ? {}
+    : {
+        height: `calc(100vh + ${mediaScrollDistance.value.toFixed(2)}px)`,
+      },
+)
 
-const mediaTrackStyle = computed(() => ({
-  transform: `translate3d(-${(mediaProgress.value * mediaScrollDistance.value).toFixed(2)}px, 0, 0)`,
-}))
+const mediaTrackStyle = computed(() =>
+  isMobileMediaMode.value
+    ? {}
+    : {
+        transform: `translate3d(-${(mediaProgress.value * mediaScrollDistance.value).toFixed(2)}px, 0, 0)`,
+      },
+)
 
 const vReveal = {
   mounted(el, binding) {
@@ -446,10 +508,23 @@ const vReveal = {
 }
 
 onMounted(() => {
+  updateMediaMode()
   updateMediaMetrics()
   updateScrollState()
   window.addEventListener('scroll', scheduleScrollUpdate, { passive: true })
   window.addEventListener('resize', handleResize)
+
+  mediaModeQuery = window.matchMedia('(max-width: 760px)')
+  mediaModeQueryListener = (event) => {
+    isMobileMediaMode.value = event.matches
+    handleResize()
+  }
+
+  if (typeof mediaModeQuery.addEventListener === 'function') {
+    mediaModeQuery.addEventListener('change', mediaModeQueryListener)
+  } else if (typeof mediaModeQuery.addListener === 'function') {
+    mediaModeQuery.addListener(mediaModeQueryListener)
+  }
 
   nextTick(() => {
     updateMediaMetrics()
@@ -466,6 +541,17 @@ onBeforeUnmount(() => {
     window.removeEventListener('scroll', scheduleScrollUpdate)
     window.removeEventListener('resize', handleResize)
   }
+
+  if (mediaModeQuery && mediaModeQueryListener) {
+    if (typeof mediaModeQuery.removeEventListener === 'function') {
+      mediaModeQuery.removeEventListener('change', mediaModeQueryListener)
+    } else if (typeof mediaModeQuery.removeListener === 'function') {
+      mediaModeQuery.removeListener(mediaModeQueryListener)
+    }
+  }
+
+  mediaModeQuery = null
+  mediaModeQueryListener = null
 
   videoRefs.value.forEach((target) => {
     if (!target) {
@@ -512,10 +598,11 @@ onBeforeUnmount(() => {
                 <video
                   :ref="(el) => setVideoRef(el, index)"
                   :src="item.video"
+                  :poster="item.poster"
                   muted
                   loop
                   playsinline
-                  preload="auto"
+                  :preload="item.preload"
                   @loadedmetadata="handleResize"
                   @loadeddata="primeVideoFrame(index)"
                 ></video>
@@ -1392,6 +1479,12 @@ h2 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .about_grid > :last-child:nth-child(odd),
+  .portfolio_featured > :last-child:nth-child(odd),
+  .portfolio_grid > :last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+
   .journey_layout {
     grid-template-columns: 1fr;
     gap: 1.2rem;
@@ -1413,17 +1506,26 @@ h2 {
   }
 
   .media_sticky {
+    position: static;
+    height: auto;
+    align-items: stretch;
     padding-top: 4.9rem;
     padding-bottom: 0.8rem;
   }
 
+  .media_viewport {
+    overflow: visible;
+  }
+
   .video_track {
+    display: grid;
+    grid-template-columns: 1fr;
     gap: 0.62rem;
     padding: 0 1.2rem;
   }
 
   .video_item {
-    flex-basis: 94vw;
+    flex: initial;
   }
 
   .section {
