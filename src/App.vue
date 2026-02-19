@@ -589,7 +589,6 @@ onBeforeUnmount(() => {
           <div class="section_head" v-reveal="'up'">
             <p class="section_kicker">PORTFOLIO</p>
             <h2>고정 비율로 구성한 실제 시공 포트폴리오</h2>
-            <p class="portfolio_note">카드 비율을 통일해 일부 이미지는 잘릴 수 있습니다.</p>
           </div>
 
           <div class="portfolio_featured" v-if="featuredProjects.length">
@@ -1286,19 +1285,20 @@ h2 {
 }
 
 .footer_banner_text {
-  width: calc(100% - min(320px, 26vw));
+  width: calc(100% - min(288px, 23vw));
   height: 100%;
   display: grid;
   align-items: center;
-  padding: clamp(1.1rem, 2.3vw, 2.1rem);
+  padding: clamp(0.65rem, 1.7vw, 1.35rem);
 }
 
 .footer_banner_text h2 {
   margin: 0;
   color: #eceff3;
-  font-size: clamp(4.8rem, 18vw, 18rem);
-  letter-spacing: 0.02em;
-  line-height: 0.82;
+  font-size: clamp(5.8rem, 22vw, 21rem);
+  letter-spacing: -0.01em;
+  line-height: 0.78;
+  white-space: nowrap;
 }
 
 .footer_banner_video {
@@ -1306,7 +1306,7 @@ h2 {
   right: clamp(0.85rem, 1.8vw, 1.6rem);
   top: 50%;
   transform: translateY(-50%);
-  width: min(320px, 26vw);
+  width: min(288px, 23vw);
   aspect-ratio: 9 / 16;
   border-radius: 18px;
   border: 1px solid rgba(255, 255, 255, 0.16);
@@ -1487,6 +1487,11 @@ h2 {
   .footer_banner_text {
     width: 100%;
     padding: 0;
+  }
+
+  .footer_banner_text h2 {
+    font-size: clamp(3.6rem, 20vw, 7rem);
+    line-height: 0.82;
   }
 
   .footer_banner_video {
