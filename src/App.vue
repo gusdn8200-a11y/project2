@@ -327,15 +327,6 @@ const playHoveredVideo = async (index) => {
   }
 }
 
-const pauseHoveredVideo = (index) => {
-  const target = videoRefs.value[index]
-  if (!target) {
-    return
-  }
-
-  target.pause()
-}
-
 const resetVideoToStart = (index) => {
   const target = videoRefs.value[index]
   if (!target) {
@@ -599,9 +590,9 @@ onBeforeUnmount(() => {
               :key="item.id"
               tabindex="0"
               @mouseenter="playHoveredVideo(index)"
-              @mouseleave="pauseHoveredVideo(index)"
+              @mouseleave="resetVideoToStart(index)"
               @focusin="playHoveredVideo(index)"
-              @focusout="pauseHoveredVideo(index)"
+              @focusout="resetVideoToStart(index)"
               @touchstart.passive="handleVideoTouchStart(index)"
               @touchend="handleVideoTouchEnd(index)"
               @touchcancel="handleVideoTouchEnd(index)"
