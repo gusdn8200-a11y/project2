@@ -3,10 +3,93 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="wallD 프로젝트 소개 페이지 - 벽면 임대 매칭, 아트/광고 통합 기획, 현장 실행 원스톱 솔루션"
+    />
     <title>wallD</title>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Pretendard", "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic",
+          "Helvetica Neue", sans-serif;
+        background: #050608;
+        color: #f3f4f6;
+      }
+
+      .fallback_page {
+        min-height: 100vh;
+        display: grid;
+        align-content: center;
+        gap: 0.85rem;
+        width: min(760px, calc(100% - 2rem));
+        margin: 0 auto;
+        padding: 3.2rem 0;
+      }
+
+      .fallback_page h1 {
+        margin: 0;
+        font-size: clamp(1.8rem, 4vw, 2.5rem);
+      }
+
+      .fallback_page p {
+        margin: 0;
+        line-height: 1.65;
+        color: #d6dde7;
+      }
+
+      .fallback_meta {
+        margin: 0;
+        padding-left: 1.1rem;
+        color: #c9d1dc;
+        line-height: 1.7;
+      }
+
+      .fallback_links {
+        margin: 0;
+        padding-left: 1.1rem;
+      }
+
+      .fallback_links a {
+        color: #eef2f8;
+      }
+
+      noscript {
+        display: block;
+        width: min(760px, calc(100% - 2rem));
+        margin: -1.3rem auto 2.2rem;
+        color: #aeb8c4;
+        line-height: 1.7;
+      }
+    </style>
   </head>
   <body>
-    <div id="app"></div>
+    <div id="app">
+      <main class="fallback_page" role="main" aria-labelledby="fallback-title">
+        <h1 id="fallback-title">wallD 프로젝트 페이지</h1>
+        <p>
+          벽면 광고와 아트 프로젝트를 연결하는 wallD 포트폴리오입니다. JavaScript가 동작하면 인터랙티브
+          페이지가 자동으로 표시됩니다.
+        </p>
+        <ul class="fallback_meta">
+          <li>프로젝트 설명: 상권/동선 기반 벽면 매칭과 브랜딩 시공 사례 소개</li>
+          <li>역할: 서비스 기획, 시각 디자인, 프로젝트 실행</li>
+          <li>핵심 섹션: 소개, 포트폴리오, 미디어, 문의</li>
+        </ul>
+        <ul class="fallback_links">
+          <li><a href="https://gusdn8200-a11y.github.io/project2/">프로젝트 링크</a></li>
+          <li><a href="mailto:leonardo@wall-d.com">문의 이메일</a></li>
+        </ul>
+      </main>
+    </div>
+    <noscript>
+      JavaScript가 비활성화되어 정적 안내만 표시 중입니다. 프로젝트 확인:
+      <a href="https://gusdn8200-a11y.github.io/project2/">https://gusdn8200-a11y.github.io/project2/</a>
+    </noscript>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

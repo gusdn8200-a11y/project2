@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="refresh" content="3; url=/project2/" />
+    <title>wallD | 페이지를 찾을 수 없습니다</title>
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background: #050608;
+        color: #f3f4f6;
+        font-family: "Pretendard", "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic",
+          "Helvetica Neue", sans-serif;
+      }
+
+      main {
+        width: min(760px, calc(100% - 2rem));
+        display: grid;
+        gap: 0.8rem;
+        line-height: 1.65;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(1.6rem, 4vw, 2.3rem);
+      }
+
+      p {
+        margin: 0;
+        color: #d0d8e2;
+      }
+
+      a {
+        color: #eff3f8;
+      }
+
+      ul {
+        margin: 0;
+        padding-left: 1.1rem;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>요청한 페이지를 찾을 수 없습니다.</h1>
+      <p>3초 후 wallD 메인 페이지로 이동합니다.</p>
+      <ul>
+        <li>프로젝트 설명: wallD 벽면 광고/아트 포트폴리오</li>
+        <li>프로젝트 링크: <a href="/project2/">/project2/</a></li>
+        <li>문의 이메일: <a href="mailto:leonardo@wall-d.com">leonardo@wall-d.com</a></li>
+      </ul>
+      <p><a href="/project2/">자동 이동이 안 되면 여기를 클릭하세요.</a></p>
+    </main>
+    <script>
+      (function () {
+        var basePath = "/project2/";
+        if (window.location.pathname !== basePath) {
+          window.location.replace(basePath);
+        }
+      })();
+    </script>
+  </body>
+</html>
