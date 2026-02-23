@@ -3,7 +3,6 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta http-equiv="refresh" content="3; url=/project2/" />
     <title>wallD | 페이지를 찾을 수 없습니다</title>
     <style>
       body {
@@ -43,11 +42,41 @@
         padding-left: 1.1rem;
       }
     </style>
+    <script>
+      (function () {
+        var pathSegmentsToKeep = 1;
+        var location = window.location;
+
+        var routePath = location.pathname
+          .slice(1)
+          .split('/')
+          .slice(pathSegmentsToKeep)
+          .join('/')
+          .replace(/&/g, '~and~');
+
+        var query = location.search ? '&' + location.search.slice(1).replace(/&/g, '~and~') : '';
+
+        var redirectPath =
+          location.pathname.split('/').slice(0, 1 + pathSegmentsToKeep).join('/') +
+          '/?/' +
+          routePath +
+          query +
+          location.hash;
+
+        location.replace(
+          location.protocol +
+            '//' +
+            location.hostname +
+            (location.port ? ':' + location.port : '') +
+            redirectPath,
+        );
+      })();
+    </script>
   </head>
   <body>
     <main>
       <h1>요청한 페이지를 찾을 수 없습니다.</h1>
-      <p>3초 후 wallD 메인 페이지로 이동합니다.</p>
+      <p>주소를 확인하는 동안 wallD 메인 페이지로 이동합니다.</p>
       <ul>
         <li>프로젝트 설명: wallD 벽면 광고/아트 포트폴리오</li>
         <li>프로젝트 링크: <a href="/project2/">/project2/</a></li>
@@ -55,13 +84,9 @@
       </ul>
       <p><a href="/project2/">자동 이동이 안 되면 여기를 클릭하세요.</a></p>
     </main>
-    <script>
-      (function () {
-        var basePath = "/project2/";
-        if (window.location.pathname !== basePath) {
-          window.location.replace(basePath);
-        }
-      })();
-    </script>
+    <noscript>
+      JavaScript가 비활성화되어 자동 이동을 사용할 수 없습니다.
+      <a href="/project2/">/project2/</a>로 직접 이동해주세요.
+    </noscript>
   </body>
 </html>

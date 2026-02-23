@@ -66,6 +66,28 @@
         line-height: 1.7;
       }
     </style>
+    <script>
+      (function (location) {
+        if (!location.search || location.search.charAt(1) !== '/') {
+          return;
+        }
+
+        var decoded = location.search
+          .slice(1)
+          .split('&')
+          .map(function (segment) {
+            return segment.replace(/~and~/g, '&');
+          })
+          .join('?');
+
+        var basePath = location.pathname;
+        if (basePath.charAt(basePath.length - 1) === '/') {
+          basePath = basePath.slice(0, -1);
+        }
+
+        window.history.replaceState(null, '', basePath + decoded + location.hash);
+      })(window.location);
+    </script>
   </head>
   <body>
     <div id="app">

@@ -475,22 +475,34 @@ const vReveal = {
       return
     }
 
-    const observer = new IntersectionObserver(
-      (entries, currentObserver) => {
-        entries.forEach((entry) => {
-          if (!entry.isIntersecting) {
-            return
-          }
+    if (typeof window.IntersectionObserver !== 'function') {
+      el.classList.add('is_visible')
+      return
+    }
 
-          entry.target.classList.add('is_visible')
-          currentObserver.unobserve(entry.target)
-        })
-      },
-      {
-        threshold: 0.15,
-        rootMargin: '0px 0px -10% 0px',
-      },
-    )
+    let observer = null
+
+    try {
+      observer = new IntersectionObserver(
+        (entries, currentObserver) => {
+          entries.forEach((entry) => {
+            if (!entry.isIntersecting) {
+              return
+            }
+
+            entry.target.classList.add('is_visible')
+            currentObserver.unobserve(entry.target)
+          })
+        },
+        {
+          threshold: 0.15,
+          rootMargin: '0px 0px -10% 0px',
+        },
+      )
+    } catch {
+      el.classList.add('is_visible')
+      return
+    }
 
     observer.observe(el)
     revealObservers.set(el, observer)
