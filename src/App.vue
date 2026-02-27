@@ -70,33 +70,6 @@ const mediaDisplayTitles = [
   '시트 래핑',
 ]
 
-const mediaPosterColors = [
-  ['#0f1219', '#2f436e'],
-  ['#10141c', '#41566e'],
-  ['#10151e', '#334f63'],
-  ['#12151d', '#4b3f65'],
-  ['#11161f', '#3b5f5b'],
-]
-
-const buildMediaPoster = (title, index) => {
-  const [startColor, endColor] = mediaPosterColors[index % mediaPosterColors.length]
-  const svg = `
-<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 1500'>
-  <defs>
-    <linearGradient id='posterGradient' x1='0' y1='0' x2='1' y2='1'>
-      <stop offset='0%' stop-color='${startColor}' />
-      <stop offset='100%' stop-color='${endColor}' />
-    </linearGradient>
-  </defs>
-  <rect width='1200' height='1500' fill='url(#posterGradient)' />
-  <rect x='52' y='52' width='1096' height='1396' fill='none' stroke='rgba(255,255,255,0.18)' stroke-width='3' />
-  <text x='94' y='1406' fill='rgba(255,255,255,0.88)' font-size='62' font-family='Arial, sans-serif' letter-spacing='2'>${title}</text>
-</svg>
-  `.trim()
-
-  return `data:image/svg+xml,${encodeURIComponent(svg)}`
-}
-
 const sortedVideoItems = Object.entries(mediaVideoModules)
   .map(([path, video]) => {
     return {
@@ -121,8 +94,7 @@ const allVideoItems = sortedVideoItems.map((item, index) => {
   return {
     ...item,
     title,
-    poster: buildMediaPoster(title, index),
-    preload: index < 2 ? 'auto' : 'metadata',
+    preload: index < 3 ? 'auto' : 'metadata',
   }
 })
 
@@ -270,11 +242,14 @@ const mediaProgress = ref(0)
 const mediaScrollDistance = ref(0)
 const isMobileMediaMode = ref(false)
 const videoRefs = ref([])
+const videoReadyStates = ref([])
+const isMediaTrackReady = ref(false)
 
 let scrollTicking = false
 let rafId = null
 let mediaModeQuery = null
 let mediaModeQueryListener = null
+let mediaReadyTimeoutId = null
 
 const clamp = (value, min = 0, max = 1) => Math.min(max, Math.max(min, value))
 
@@ -296,6 +271,43 @@ function primeVideoFrame(index) {
   } catch {
     // Ignore browsers that block seeking before full metadata sync.
   }
+}
+
+const clearMediaReadyTimeout = () => {
+  if (typeof window === 'undefined' || mediaReadyTimeoutId === null) {
+    return
+  }
+
+  window.clearTimeout(mediaReadyTimeoutId)
+  mediaReadyTimeoutId = null
+}
+
+const isVideoReady = (index) => Boolean(videoReadyStates.value[index])
+
+const markVideoReady = (index) => {
+  if (videoReadyStates.value[index]) {
+    return
+  }
+
+  videoReadyStates.value[index] = true
+
+  if (isMediaTrackReady.value) {
+    return
+  }
+
+  const requiredReadyCount = mediaItems.length > 0 ? 1 : 0
+  const currentReadyCount = videoReadyStates.value.filter(Boolean).length
+  if (currentReadyCount < requiredReadyCount) {
+    return
+  }
+
+  isMediaTrackReady.value = true
+  clearMediaReadyTimeout()
+}
+
+const handleVideoLoadedData = (index) => {
+  markVideoReady(index)
+  primeVideoFrame(index)
 }
 
 const setVideoRef = (el, index) => {
@@ -511,6 +523,17 @@ const vReveal = {
 }
 
 onMounted(() => {
+  isMediaTrackReady.value = mediaItems.length === 0
+  videoReadyStates.value = new Array(mediaItems.length).fill(false)
+  clearMediaReadyTimeout()
+
+  if (mediaItems.length > 0 && typeof window !== 'undefined') {
+    mediaReadyTimeoutId = window.setTimeout(() => {
+      isMediaTrackReady.value = true
+      mediaReadyTimeoutId = null
+    }, 1400)
+  }
+
   updateMediaMode()
   updateMediaMetrics()
   updateScrollState()
@@ -536,6 +559,8 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  clearMediaReadyTimeout()
+
   if (typeof window !== 'undefined') {
     if (rafId !== null) {
       window.cancelAnimationFrame(rafId)
@@ -583,12 +608,19 @@ onBeforeUnmount(() => {
     <section id="media" class="media_section" ref="mediaSectionRef" :style="mediaSectionStyle">
       <div class="media_sticky">
         <div class="media_viewport" ref="mediaViewportRef">
-          <div v-if="mediaItems.length" class="video_track" ref="mediaTrackRef" :style="mediaTrackStyle">
+          <div
+            v-if="mediaItems.length"
+            class="video_track"
+            :class="{ is_ready: isMediaTrackReady }"
+            ref="mediaTrackRef"
+            :style="mediaTrackStyle"
+          >
             <div
               class="video_item"
+              :class="{ is_video_ready: isVideoReady(index) }"
               v-for="(item, index) in mediaItems"
               :key="item.id"
-              tabindex="0"
+              :tabindex="isVideoReady(index) ? 0 : -1"
               @mouseenter="playHoveredVideo(index)"
               @mouseleave="resetVideoToStart(index)"
               @focusin="playHoveredVideo(index)"
@@ -601,13 +633,12 @@ onBeforeUnmount(() => {
                 <video
                   :ref="(el) => setVideoRef(el, index)"
                   :src="item.video"
-                  :poster="item.poster"
                   muted
                   loop
                   playsinline
                   :preload="item.preload"
                   @loadedmetadata="handleResize"
-                  @loadeddata="primeVideoFrame(index)"
+                  @loadeddata="handleVideoLoadedData(index)"
                 ></video>
               </div>
               <p class="video_title">{{ item.title }}</p>
@@ -990,6 +1021,12 @@ h2 {
   padding: 0 2.8rem;
   will-change: transform;
   background: #000;
+  opacity: 0;
+  transition: opacity 0.45s ease;
+}
+
+.video_track.is_ready {
+  opacity: 1;
 }
 
 .video_item {
@@ -998,6 +1035,18 @@ h2 {
   gap: 0.45rem;
   outline: none;
   background: #000;
+  opacity: 0;
+  transform: translate3d(0, 10px, 0);
+  transition:
+    opacity 0.4s ease,
+    transform 0.55s ease;
+  pointer-events: none;
+}
+
+.video_item.is_video_ready {
+  opacity: 1;
+  transform: translate3d(0, 0, 0);
+  pointer-events: auto;
 }
 
 .video_item:focus-visible {
@@ -1017,6 +1066,12 @@ h2 {
   object-fit: contain;
   background: #000;
   pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+
+.video_item.is_video_ready .video_frame video {
+  opacity: 1;
 }
 
 .video_title {
